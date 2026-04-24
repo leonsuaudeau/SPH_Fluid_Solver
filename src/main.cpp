@@ -1,15 +1,15 @@
 #include <cstdio>
 #include <vector>
-#include <glad/glad.h>
+#include <iostream>
+#include <glm/vec2.hpp>
+#include "glad/glad.h"
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
-#include <iostream>
-#include <glm/vec2.hpp>
-#include "shader_utilities.h"
 #include "particle.h"
 #include "camera.h"
+#include "shader_utilities.h"
 
 static void glfw_error_callback(int error, const char* description) {
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
@@ -29,6 +29,9 @@ int main() {
     // Create GLFW window
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) return 1;
+
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 
     float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor());
     GLFWwindow* window = glfwCreateWindow(
@@ -79,8 +82,6 @@ int main() {
         ImGui::Begin("Test Window");
         ImGui::Text("Hello, world!");
         ImGui::End();
-
-        ImGui::Render();
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
 
@@ -93,7 +94,7 @@ int main() {
 
         glUseProgram(shaderProgram);
         glBindVertexArray(vao);
-        for (auto& p : particles) {
+        for (const auto& p : particles) {
             glUniformMatrix4fv(transformLoc, 1, GL_FALSE, &cameraTransform[0][0]);
             glUniform2f(centerLoc, p.x, p.y);
             glUniform1f(radiusLoc, 0.1f);
@@ -103,14 +104,16 @@ int main() {
         }
         glBindVertexArray(0);
 
+        ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         glfwSwapBuffers(window);
     }
-
+    /* // TODO: figure out reason for segfault (exit code 139)
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+    */
     glfwDestroyWindow(window);
     glfwTerminate();
 

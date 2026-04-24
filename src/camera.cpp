@@ -30,5 +30,5 @@ void Camera2D::updateTransform(const int screenWidth, const int screenHeight) {
     const float viewHeight = scale;
     const float viewWidth = viewHeight * aspectRatio;
     projection = glm::ortho(position.x - viewWidth * 0.5f, position.x + viewWidth * 0.5f, position.y - viewHeight * 0.5f, position.y + viewHeight * 0.5f, -1.0f, 1.0f);
-    view = glm::translate(glm::mat4(1.0f), glm::vec3(-position, 1.0f));
+    view = glm::translate(glm::mat4(1.0f), glm::vec3(-position, 0.0f));
 }
