@@ -16,12 +16,12 @@ static void glfw_error_callback(int error, const char* description) {
 }
 
 int main() {
-    std::vector<Particle> particles;
+    std::vector<Particle2D> particles;
     Camera2D camera(glm::vec2(0, 0), 20, 0.1f);
 
     for (int y = -8; y <= 8; y++) {
         for (int x = -10; x <= 10; x++) {
-            particles.emplace_back(Particle(x, y, 0, 0, 0, 0, 1));
+            particles.emplace_back(Particle2D(glm::vec2(x, y), glm::vec2(0, 0), 1));
         }
     }
     std::cout << "Number of particles: " << particles.size() << std::endl;
@@ -96,7 +96,7 @@ int main() {
         glBindVertexArray(vao);
         for (const auto& p : particles) {
             glUniformMatrix4fv(transformLoc, 1, GL_FALSE, &cameraTransform[0][0]);
-            glUniform2f(centerLoc, p.x, p.y);
+            glUniform2f(centerLoc, p.pos.x, p.pos.y);
             glUniform1f(radiusLoc, 0.1f);
             glUniform3f(colorLoc, 1,0,0);
 

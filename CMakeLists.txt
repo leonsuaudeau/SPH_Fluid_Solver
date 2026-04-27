@@ -31,7 +31,7 @@ target_compile_definitions(SPH_Fluid_Solver PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLA
 
 
 add_library(glad external/glad/src/glad.c
-        include/motion_update.h)
+        include/math.h)
 target_include_directories(glad PUBLIC external/glad/include)
 
 target_include_directories(SPH_Fluid_Solver PRIVATE include external/imgui external/imgui/backends)
