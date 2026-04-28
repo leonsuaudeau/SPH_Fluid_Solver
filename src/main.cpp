@@ -9,10 +9,46 @@
 #include <imgui_impl_opengl3.h>
 #include "particle.h"
 #include "camera.h"
+#include "math.h"
 #include "shader_utilities.h"
 
 static void glfw_error_callback(int error, const char* description) {
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
+}
+
+inline void fluid_solver_iteration(std::vector<Particle2D> &particles) {
+    float h = 2;
+    float dt = 0.001f;
+    std::vector<std::vector<Particle2D>> neighborIndices{};
+    std::vector<glm::vec2> accelerations{};
+
+    for (int i = 0; i < particles.size(); i++) {
+        neighborIndices.emplace_back();
+        for (int j = 0; j < particles.size(); j++) {
+            glm::vec2 p_ij = particles[j].pos - particles[i].pos;
+            if (length(p_ij) <= 2 * h && i != j) {
+                neighborIndices[i].push_back(particles[j]);
+            }
+        }
+    }
+
+    for (int i = 0; i < particles.size(); i++) {
+        particles[i].density = density_explicit(particles[i], neighborIndices[i], h);
+        particles[i].pressure = pressure(particles[i], 10, 1);
+    }
+
+    for (int i = 0; i < particles.size(); i++) {
+        accelerations.emplace_back(0, 0);
+        accelerations[i] -= glm::vec2(0, 9.81f);
+        accelerations[i] += get_viscosity_accel(particles[i], neighborIndices[i], h, 0.000001f);
+        accelerations[i] += get_pressure_accel(particles[i], neighborIndices[i], h);
+    }
+
+    for (int i = 0; i < particles.size(); i++) {
+        Particle2D &p_i = particles[i];
+        p_i.vel = euler_cromer_vel_step(p_i.vel, accelerations[i], dt);
+        p_i.pos = euler_cromer_pos_step(p_i.pos, p_i.vel, dt);
+    }
 }
 
 int main() {
@@ -21,7 +57,7 @@ int main() {
 
     for (int y = -8; y <= 8; y++) {
         for (int x = -10; x <= 10; x++) {
-            particles.emplace_back(Particle2D(glm::vec2(x, y), glm::vec2(0, 0), 1));
+            particles.emplace_back(Particle2D(glm::vec2(x, y), glm::vec2(0, 0), 1, 0, 1));
         }
     }
     std::cout << "Number of particles: " << particles.size() << std::endl;
@@ -74,6 +110,8 @@ int main() {
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) camera.move(0, -1);
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) camera.move(-1, 0);
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) camera.move(1, 0);
+
+        fluid_solver_iteration(particles);
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
