@@ -3,7 +3,6 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
-
 #include "particle.h"
 
 glm::vec2 inline euler_cromer_pos_step(const glm::vec2 x_t, const glm::vec2 v_t_next, const float dt) {
