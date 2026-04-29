@@ -6,6 +6,7 @@ class Camera2D {
 public:
     Camera2D(glm::vec2 position, float scale, float speed);
     void move(float x, float y);
+    void setPosition(float x, float y);
     void zoom(float amount);
     void updateTransform(int screenWidth, int screenHeight);
     [[nodiscard]] glm::mat4 getViewMatrix() const;

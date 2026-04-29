@@ -18,22 +18,21 @@ static void glfw_error_callback(int error, const char* description) {
 }
 
 int main() {
+    bool paused = true;
     Camera2D camera(glm::vec2(0, 0), 20, 0.1f);
-    std::vector<Particle2D> particles;
 
-    float dx = 0.5f; // particle spacing
-    float h = 2.0f * dx; // smoothing length
-    float rest_density = 1.0f;
-    float particle_mass = dx * dx * rest_density; // 2D case with dx²
-    glm::ivec2 particle_count = glm::ivec2(10, 10);
-    glm::vec2 grid_origin = glm::ivec2(-1, -1);
+    constexpr float dt = 0.01f;
+    constexpr float k = 10;
+    constexpr float dx = 0.4f;
+    constexpr float h = 2.0f * dx;
+    constexpr float rho_0 = 1.0f;
+    constexpr float m_i = dx * dx * rho_0; // 2D case with dx²
+    constexpr glm::ivec2 particle_count(30, 24);
+    constexpr glm::vec2 grid_origin(-1, -1);
 
-    for (int y = 0; y < particle_count.y; y++ ) {
-        for (int x = 0; x < particle_count.x; x++) {
-            glm::vec2 pos = grid_origin + glm::vec2(x, y) * dx;
-            particles.emplace_back(Particle2D(pos, glm::vec2(0), glm::vec2(0), particle_mass, 0, rest_density));
-        }
-    }
+    // fluid
+    auto particles = create_uniform_grid(particle_count, grid_origin, m_i, rho_0, dx, glm::vec3(1,0,0));
+
     std::cout << "Number of particles: " << particles.size() << std::endl;
 
     // Create GLFW window
@@ -85,15 +84,33 @@ int main() {
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) camera.move(-1, 0);
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) camera.move(1, 0);
 
-        fluid_solver_iteration(particles, 0.001f, h);
+        if (!paused) {
+            fluid_solver_iteration(particles, dt, h, rho_0, k);
+        }
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::Begin("Test Window");
-        ImGui::Text("Hello, world!");
+        ImGui::SetNextWindowSizeConstraints( ImVec2(200, 0), ImVec2(FLT_MAX, FLT_MAX));
+        ImGuiWindowFlags flags = ImGuiWindowFlags_AlwaysAutoResize;
+
+        ImGui::Begin("Simulation control", nullptr, flags);
+        if (ImGui::Button(paused ? "Resume" : "Pause")) {
+            paused = !paused;
+        }
+        if (ImGui::Button("Reset")) {
+            particles = create_uniform_grid(particle_count, grid_origin, m_i, rho_0, dx, glm::vec3(1,0,0));
+        }
         ImGui::End();
+
+        ImGui::SetNextWindowSizeConstraints( ImVec2(200, 0), ImVec2(FLT_MAX, FLT_MAX));
+        ImGui::Begin("Camera control", nullptr, flags);
+        if (ImGui::Button("Reset")) {
+            camera.setPosition(0, 0);
+        }
+        ImGui::End();
+
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
 
@@ -110,7 +127,7 @@ int main() {
             glUniformMatrix4fv(transformLoc, 1, GL_FALSE, &cameraTransform[0][0]);
             glUniform2f(centerLoc, p.pos.x, p.pos.y);
             glUniform1f(radiusLoc, 0.1f);
-            glUniform3f(colorLoc, 1,0,0);
+            glUniform3f(colorLoc, p.color.r,p.color.g,p.color.b);
 
             glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
         }

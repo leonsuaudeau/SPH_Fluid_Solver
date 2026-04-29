@@ -21,6 +21,10 @@ void Camera2D::move(const float x, const float y) {
     position.y += y * speed;
 }
 
+void Camera2D::setPosition(const float x, const float y) {
+    position = glm::vec2(x, y);
+}
+
 void Camera2D::zoom(const float amount) {
     scale += amount;
 }

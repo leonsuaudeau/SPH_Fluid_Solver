@@ -9,6 +9,8 @@ struct Particle2D {
     float mass;
     float pressure;
     float density;
+    glm::vec3 color; // TODO: this is just for now
+    bool is_fixed = false; // TODO: remove this later
 };
 
 #endif //SPH_FLUID_SOLVER_PARTICLE_H
