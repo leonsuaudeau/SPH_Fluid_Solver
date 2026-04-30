@@ -1,5 +1,7 @@
 add_library(sph_solver
         sph/solver.cpp
+        sph/sph_kernel.h
+        sph/sph_integrators.h
 )
 
 target_include_directories(sph_solver PUBLIC

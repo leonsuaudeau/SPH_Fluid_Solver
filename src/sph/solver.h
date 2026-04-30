@@ -3,10 +3,33 @@
 #include <vector>
 #include "particle.h"
 
-std::vector<std::vector<Particle2D>> get_neighbors(const std::vector<Particle2D> &particles, float h);
+class FluidSolver {
+public:
+    FluidSolver(float h, float rho_0, float k, float nu, glm::vec2 g);
+    void step(float dt);
+    void add_particle(glm::vec2 o, glm::vec3 color, bool is_fixed = false);
+    void add_particle_grid(glm::ivec2 N, glm::vec2 o, glm::vec3 color, bool is_fixed = false);
+    void clean_particles();
+    [[nodiscard]] int get_num_particles() const {return particles.size();}
+    [[nodiscard]] float get_particle_density(int i) const {return particles[i].density;}
+    std::vector<Particle2D> &get_particles() {return particles;}
+    [[nodiscard]] float get_h() const {return h;}
 
-std::vector<Particle2D> create_uniform_grid(glm::ivec2 particle_count, glm::vec2 grid_origin, float m_i, float rho_0, float dx, glm::vec3 color, bool is_fixed = false);
-
-void fluid_solver_iteration(std::vector<Particle2D> &particles, float dt, float h, float rho_0, float k);
+private:
+    [[nodiscard]] float density_explicit(int i) const;
+    [[nodiscard]] float pressure(int i) const;
+    [[nodiscard]] glm::vec2 pressure_acceleration(int i) const;
+    [[nodiscard]] glm::vec2 viscosity_acceleration(int i) const;
+    [[nodiscard]] glm::vec2 gravity_acceleration(int i) const;
+    [[nodiscard]] float particle_mass() const;
+    void update_neighbors();
+    std::vector<Particle2D> particles{};
+    std::vector<std::vector<int>> neighbor_indices{};
+    float h;
+    float rho_0;
+    float k;
+    float nu;
+    glm::vec2 g{};
+};
 
 #endif //SPH_FLUID_SOLVER_SOLVER_H

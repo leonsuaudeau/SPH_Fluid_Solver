@@ -1,5 +1,4 @@
 #include <cstdio>
-#include <vector>
 #include <iostream>
 #include <glm/vec2.hpp>
 #include "glad/glad.h"
@@ -7,9 +6,7 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
-#include "sph/particle.h"
 #include "camera.h"
-#include "sph/sph_math.h"
 #include "shader_utilities.h"
 #include "solver.h"
 
@@ -19,21 +16,14 @@ static void glfw_error_callback(int error, const char* description) {
 
 int main() {
     bool paused = true;
-    Camera2D camera(glm::vec2(0, 0), 20, 0.1f);
+    Camera2D camera(glm::vec2(0, 0), 40, 0.1f);
+    constexpr float dt = 0.006f;
+    FluidSolver solver(0.9f, 1.1f, 2000, 0.0f, glm::vec2(0, -9.81f));
 
-    constexpr float dt = 0.01f;
-    constexpr float k = 10;
-    constexpr float dx = 0.4f;
-    constexpr float h = 2.0f * dx;
-    constexpr float rho_0 = 1.0f;
-    constexpr float m_i = dx * dx * rho_0; // 2D case with dx²
-    constexpr glm::ivec2 particle_count(30, 24);
-    constexpr glm::vec2 grid_origin(-1, -1);
+    solver.add_particle({0,0}, {1,0,0});
+    solver.add_particle_grid({40, 3}, {-20, -10}, {0,1,0}, true);
 
-    // fluid
-    auto particles = create_uniform_grid(particle_count, grid_origin, m_i, rho_0, dx, glm::vec3(1,0,0));
-
-    std::cout << "Number of particles: " << particles.size() << std::endl;
+    std::cout << "Number of particles: " << solver.get_num_particles() << std::endl;
 
     // Create GLFW window
     glfwSetErrorCallback(glfw_error_callback);
@@ -85,7 +75,8 @@ int main() {
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) camera.move(1, 0);
 
         if (!paused) {
-            fluid_solver_iteration(particles, dt, h, rho_0, k);
+            solver.step(dt);
+            std::cout << solver.get_particle_density(0) << std::endl;
         }
 
         ImGui_ImplOpenGL3_NewFrame();
@@ -100,7 +91,9 @@ int main() {
             paused = !paused;
         }
         if (ImGui::Button("Reset")) {
-            particles = create_uniform_grid(particle_count, grid_origin, m_i, rho_0, dx, glm::vec3(1,0,0));
+            solver.clean_particles();
+            solver.add_particle({0,0}, {1,0,0});
+            solver.add_particle_grid({40, 3}, {-20, -10}, {0,1,0}, true);
         }
         ImGui::End();
 
@@ -123,10 +116,11 @@ int main() {
 
         glUseProgram(shaderProgram);
         glBindVertexArray(vao);
-        for (const auto& p : particles) {
+        float radius = solver.get_h() / 2.0f;
+        for (const auto& p : solver.get_particles()) {
             glUniformMatrix4fv(transformLoc, 1, GL_FALSE, &cameraTransform[0][0]);
             glUniform2f(centerLoc, p.pos.x, p.pos.y);
-            glUniform1f(radiusLoc, 0.1f);
+            glUniform1f(radiusLoc, radius);
             glUniform3f(colorLoc, p.color.r,p.color.g,p.color.b);
 
             glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
