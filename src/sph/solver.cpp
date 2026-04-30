@@ -8,7 +8,7 @@ std::vector<std::vector<Particle2D>> get_neighbors(const std::vector<Particle2D>
         neighbors.emplace_back();
         for (int j = 0; j < particles.size(); j++) {
             glm::vec2 p_ij = particles[j].pos - particles[i].pos;
-            if (length(p_ij) <= 2 * h && i != j) {
+            if (length(p_ij) <= 2 * h) {
                 neighbors[i].push_back(particles[j]);
             }
         }
@@ -16,12 +16,12 @@ std::vector<std::vector<Particle2D>> get_neighbors(const std::vector<Particle2D>
     return neighbors;
 }
 
-std::vector<Particle2D> create_uniform_grid(glm::ivec2 particle_count, glm::vec2 grid_origin, float m_i, float rho_0, float dx, glm::vec3 color) {
+std::vector<Particle2D> create_uniform_grid(glm::ivec2 particle_count, glm::vec2 grid_origin, float m_i, float rho_0, float dx, glm::vec3 color, bool is_fixed) {
     std::vector<Particle2D> particles{};
     for (int y = 0; y < particle_count.y; y++ ) {
         for (int x = 0; x < particle_count.x; x++) {
             const glm::vec2 pos = grid_origin + glm::vec2(x, y) * dx;
-            particles.emplace_back(Particle2D(pos, glm::vec2(0), glm::vec2(0), m_i, 0, rho_0, glm::vec3(1,0,0)));
+            particles.emplace_back(Particle2D(pos, glm::vec2(0), glm::vec2(0), m_i, 0, rho_0, color, is_fixed));
         }
     }
     return particles;
