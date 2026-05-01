@@ -9,7 +9,8 @@ find_package(glfw3 REQUIRED)
 
 add_library(glad external/glad/src/glad.c
         src/sph/solver.cpp
-        src/sph/solver.h)
+        src/sph/solver.h
+)
 target_include_directories(glad PUBLIC external/glad/include)
 add_subdirectory(src)
 

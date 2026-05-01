@@ -16,15 +16,11 @@ static void glfw_error_callback(int error, const char* description) {
 
 int main() {
     bool paused = true;
-    Camera2D camera(glm::vec2(0, 0), 40, 0.1f);
-    constexpr float dt = 0.005f;
-    FluidSolver solver(0.9f, 1.1f, 2000, 0.0f, glm::vec2(0, -9.81f));
+    Camera2D camera(glm::vec2(0, 0), 100, 0.1f);
+    FluidSolver solver(0.9f, 1.1f, 10000, 0.06f, glm::vec2(0, -9.81f));
 
-    //solver.add_particle({0,0}, {1,0,0});
-    solver.add_particle_grid({8, 3}, {-5, 0}, {1,0,0}, false);
-    solver.add_particle_grid({40, 3}, {-20, -10}, {0,1,0}, true);
-
-    std::cout << "Number of particles: " << solver.get_num_particles() << std::endl;
+    const float dt = solver.get_cfl_timestep(0.4f, 50.0f);
+    std::cout << "CLF number: " << dt << std::endl;
 
     // Create GLFW window
     glfwSetErrorCallback(glfw_error_callback);
@@ -39,7 +35,7 @@ int main() {
         (int)(800 * main_scale), "Fluid Solver", nullptr, nullptr);
     if (window == nullptr) return 1;
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1);
+    glfwSwapInterval(0); // vsync
 
     // Initialize GLAD
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -77,7 +73,7 @@ int main() {
 
         if (!paused) {
             solver.step(dt);
-            std::cout << solver.get_particle_density(0) << std::endl;
+            //std::cout << solver.get_particle_density(0) << std::endl;
         }
 
         ImGui_ImplOpenGL3_NewFrame();
@@ -91,10 +87,34 @@ int main() {
         if (ImGui::Button(paused ? "Resume" : "Pause")) {
             paused = !paused;
         }
-        if (ImGui::Button("Reset")) {
+        if (ImGui::Button("Scene 1")) {
             solver.clean_particles();
-            solver.add_particle({0,0}, {1,0,0});
-            solver.add_particle_grid({40, 3}, {-20, -10}, {0,1,0}, true);
+            solver.add_particle({0,10}, {1,0,0});
+            solver.add_particle_grid({40, 3}, {-20, -10}, {0.25,0.25,0.25}, true);
+            std::cout << "Number of particles: " << solver.get_num_particles() << std::endl;
+        }
+        if (ImGui::Button("Scene 2")) {
+            solver.clean_particles();
+            solver.add_particle_grid({100, 30}, {-50, -7.3}, {0,0,1});
+            solver.add_particle_grid({100, 3}, {-50, -10}, {0.25,0.25,0.25}, true);
+            solver.add_particle_grid({3, 80}, {-52.7, -10}, {0.25,0.25,0.25}, true);
+            solver.add_particle_grid({3, 80}, {40, -10}, {0.25,0.25,0.25}, true);
+            std::cout << "Number of particles: " << solver.get_num_particles() << std::endl;
+        }
+        if (ImGui::Button("Scene 3")) {
+            solver.clean_particles();
+            solver.add_particle_grid({40, 50}, {-50, -7.3}, {0,0,1});
+            solver.add_particle_grid({100, 3}, {-50, -10}, {0.25,0.25,0.25}, true);
+            solver.add_particle_grid({3, 80}, {-52.7, -10}, {0.25,0.25,0.25}, true);
+            solver.add_particle_grid({3, 70}, {-14, -5}, {0.25,0.25,0.25}, true);
+            solver.add_particle_grid({3, 80}, {40, -10}, {0.25,0.25,0.25}, true);
+            std::cout << "Number of particles: " << solver.get_num_particles() << std::endl;
+        }
+        if (ImGui::Button("Add Cubes")) {
+            solver.add_particle_grid({10, 10}, {-5, 40}, {1,0,0});
+            solver.add_particle_grid({10, 10}, {-5, 60}, {0,1,0});
+            solver.add_particle_grid({10, 10}, {-5, 80}, {1,1,0});
+            std::cout << "Number of particles: " << solver.get_num_particles() << std::endl;
         }
         ImGui::End();
 
@@ -122,7 +142,14 @@ int main() {
             glUniformMatrix4fv(transformLoc, 1, GL_FALSE, &cameraTransform[0][0]);
             glUniform2f(centerLoc, p.pos.x, p.pos.y);
             glUniform1f(radiusLoc, radius);
-            glUniform3f(colorLoc, p.color.r,p.color.g,p.color.b);
+            // debug pressure coloring TODO: this should be done in the shader, not here
+            glm::vec3 red{1,0,0};
+            glm::vec3 blue{0,0,1};
+            float v = glm::length(p.vel);
+            //glm::vec3 color = p.color;
+            glm::vec3 color = (p.is_fixed)? p.color : glm::mix(blue, red, v/44.0f);
+
+            glUniform3f(colorLoc, color.r,color.g,color.b);
 
             glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
         }

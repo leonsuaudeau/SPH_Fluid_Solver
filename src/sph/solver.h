@@ -8,11 +8,12 @@ public:
     FluidSolver(float h, float rho_0, float k, float nu, glm::vec2 g);
     void step(float dt);
     void add_particle(glm::vec2 o, glm::vec3 color, bool is_fixed = false);
-    void add_particle_grid(glm::ivec2 N, glm::vec2 o, glm::vec3 color, bool is_fixed = false);
+    void add_particle_grid(glm::ivec2 N, glm::vec2 o, glm::vec3 color, bool is_fixed = false, float r = 0.0f);
     void clean_particles();
     [[nodiscard]] int get_num_particles() const {return particles.size();}
     [[nodiscard]] float get_particle_density(int i) const {return particles[i].density;}
     std::vector<Particle2D> get_neighbors(int i);
+    [[nodiscard]] float get_cfl_timestep(float lambda, float max_v) const;
 
     std::vector<Particle2D> particles{};
     std::vector<std::vector<int>> neighbor_indices{};

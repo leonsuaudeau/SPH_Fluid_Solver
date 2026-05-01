@@ -1,4 +1,7 @@
 #include "solver.h"
+
+#include <glm/ext/matrix_transform.hpp>
+
 #include "sph_integrators.h"
 #include "sph_kernel.h"
 
@@ -14,11 +17,13 @@ void FluidSolver::add_particle(const glm::vec2 o, const glm::vec3 color, const b
     particles.emplace_back(Particle2D(o, glm::vec2(0), glm::vec2(0), particle_mass(), 0, rho_0, color, is_fixed));
 }
 
-void FluidSolver::add_particle_grid(const glm::ivec2 N, const glm::vec2 o, const glm::vec3 color, const bool is_fixed) {
+void FluidSolver::add_particle_grid(const glm::ivec2 N, const glm::vec2 o, const glm::vec3 color, const bool is_fixed, const float r) {
     const float m_i = particle_mass();
+    const glm::mat4 R = glm::rotate(glm::mat4(1.0f), glm::radians(r), glm::vec3(0,0,1));
     for (int y = 0; y < N.y; y++ ) {
         for (int x = 0; x < N.x; x++) {
-            const glm::vec2 pos = o + glm::vec2(x, y) * h;
+            const glm::vec4 r_pos = glm::vec4(x, y, 0.0f, 0.0f) * R;
+            const glm::vec2 pos = o + glm::vec2(r_pos.x, r_pos.y) * h;
             particles.emplace_back(Particle2D(pos, glm::vec2(0), glm::vec2(0), m_i, 0, rho_0, color, is_fixed));
         }
     }
@@ -118,4 +123,8 @@ std::vector<Particle2D> FluidSolver::get_neighbors(const int i) {
         neighbors.emplace_back(particles[j]);
     }
     return neighbors;
+}
+
+float FluidSolver::get_cfl_timestep(const float lambda, const float max_v) const {
+    return lambda * h / max_v;
 }
