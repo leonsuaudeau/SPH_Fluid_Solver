@@ -111,3 +111,11 @@ void FluidSolver::clean_particles() {
     particles.clear();
     neighbor_indices.clear();
 }
+
+std::vector<Particle2D> FluidSolver::get_neighbors(const int i) {
+    std::vector<Particle2D> neighbors{};
+    for (const auto j : neighbor_indices[i]) {
+        neighbors.emplace_back(particles[j]);
+    }
+    return neighbors;
+}

@@ -3,6 +3,8 @@
 #include <glm/glm.hpp>
 
 namespace sph::kernels {
+    /* Exact kernel formulations taken from lecture slides:
+     * Matthias Teschner, Simulation in Computer Graphics, University of Freiburg */
 
     float inline cubic_spline_2D(const glm::vec2 x_i, const glm::vec2 x_j, const float h) {
         const float d = glm::length(x_i - x_j) / h;
@@ -20,7 +22,6 @@ namespace sph::kernels {
         const float alpha = 5.0f / (14.0f * 3.14159265359f * h * h);
         return alpha * (x_i - x_j) / (d * h * h) * (-3 * t2 * t2 + 12 * t1 * t1);
     }
-
 
 }
 

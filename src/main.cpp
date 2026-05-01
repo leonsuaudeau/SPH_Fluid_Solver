@@ -17,10 +17,11 @@ static void glfw_error_callback(int error, const char* description) {
 int main() {
     bool paused = true;
     Camera2D camera(glm::vec2(0, 0), 40, 0.1f);
-    constexpr float dt = 0.006f;
+    constexpr float dt = 0.005f;
     FluidSolver solver(0.9f, 1.1f, 2000, 0.0f, glm::vec2(0, -9.81f));
 
-    solver.add_particle({0,0}, {1,0,0});
+    //solver.add_particle({0,0}, {1,0,0});
+    solver.add_particle_grid({8, 3}, {-5, 0}, {1,0,0}, false);
     solver.add_particle_grid({40, 3}, {-20, -10}, {0,1,0}, true);
 
     std::cout << "Number of particles: " << solver.get_num_particles() << std::endl;
@@ -116,8 +117,8 @@ int main() {
 
         glUseProgram(shaderProgram);
         glBindVertexArray(vao);
-        float radius = solver.get_h() / 2.0f;
-        for (const auto& p : solver.get_particles()) {
+        float radius = solver.h / 2.0f;
+        for (const auto& p : solver.particles) {
             glUniformMatrix4fv(transformLoc, 1, GL_FALSE, &cameraTransform[0][0]);
             glUniform2f(centerLoc, p.pos.x, p.pos.y);
             glUniform1f(radiusLoc, radius);

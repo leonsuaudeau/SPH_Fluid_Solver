@@ -12,8 +12,15 @@ public:
     void clean_particles();
     [[nodiscard]] int get_num_particles() const {return particles.size();}
     [[nodiscard]] float get_particle_density(int i) const {return particles[i].density;}
-    std::vector<Particle2D> &get_particles() {return particles;}
-    [[nodiscard]] float get_h() const {return h;}
+    std::vector<Particle2D> get_neighbors(int i);
+
+    std::vector<Particle2D> particles{};
+    std::vector<std::vector<int>> neighbor_indices{};
+    float h;
+    float rho_0;
+    float k;
+    float nu;
+    glm::vec2 g{};
 
 private:
     [[nodiscard]] float density_explicit(int i) const;
@@ -23,13 +30,6 @@ private:
     [[nodiscard]] glm::vec2 gravity_acceleration(int i) const;
     [[nodiscard]] float particle_mass() const;
     void update_neighbors();
-    std::vector<Particle2D> particles{};
-    std::vector<std::vector<int>> neighbor_indices{};
-    float h;
-    float rho_0;
-    float k;
-    float nu;
-    glm::vec2 g{};
 };
 
 #endif //SPH_FLUID_SOLVER_SOLVER_H
