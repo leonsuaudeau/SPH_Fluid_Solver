@@ -31,6 +31,7 @@ private:
     [[nodiscard]] glm::vec2 gravity_acceleration(int i) const;
     [[nodiscard]] float particle_mass() const;
     void update_neighbors();
+    void update_neighbors_parallel();
 };
 
 #endif //SPH_FLUID_SOLVER_SOLVER_H

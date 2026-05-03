@@ -17,9 +17,9 @@ static void glfw_error_callback(int error, const char* description) {
 int main() {
     bool paused = true;
     Camera2D camera(glm::vec2(0, 0), 100, 0.1f);
-    FluidSolver solver(0.9f, 1.1f, 10000, 0.06f, glm::vec2(0, -9.81f));
+    FluidSolver solver(0.9f, 1.1f, 10000, 0.2f, glm::vec2(0, -9.81f));
 
-    const float dt = solver.get_cfl_timestep(0.4f, 50.0f);
+    const float dt = solver.get_cfl_timestep(0.4f, 30.0f);
     std::cout << "CLF number: " << dt << std::endl;
 
     // Create GLFW window
@@ -147,7 +147,7 @@ int main() {
             glm::vec3 blue{0,0,1};
             float v = glm::length(p.vel);
             //glm::vec3 color = p.color;
-            glm::vec3 color = (p.is_fixed)? p.color : glm::mix(blue, red, v/44.0f);
+            glm::vec3 color = (p.is_fixed)? p.color : glm::mix(blue, red, v/50.0f);
 
             glUniform3f(colorLoc, color.r,color.g,color.b);
 

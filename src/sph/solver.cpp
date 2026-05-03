@@ -1,7 +1,9 @@
 #include "solver.h"
-
+#include <execution>
+#include <algorithm>
+#include <iostream>
+#include <ranges>
 #include <glm/ext/matrix_transform.hpp>
-
 #include "sph_integrators.h"
 #include "sph_kernel.h"
 
@@ -87,8 +89,29 @@ void FluidSolver::update_neighbors() {
     }
 }
 
+void FluidSolver::update_neighbors_parallel() {
+    int N = get_num_particles();
+    neighbor_indices = std::vector<std::vector<int>>(N);
+    std::vector<int> indices(N);
+    std::iota(indices.begin(), indices.end(), 0);
+
+    std::for_each(std::execution::par, indices.begin(), indices.end(), [&](int i) {
+        std::vector<int> local;
+        const Particle2D &p_i = particles[i];
+        for (int j = 0; j < particles.size(); j++) {
+                const Particle2D &p_j = particles[j];
+            glm::vec2 d = p_j.pos - p_i.pos;
+            if (glm::dot(d, d) <= (2*h)*(2*h)) {
+                    local.push_back(j);
+            }
+        }
+        neighbor_indices[i] = std::move(local);
+    });
+}
+
 void FluidSolver::step(const float dt) {
     update_neighbors();
+    //update_neighbors_parallel();
 
     for (int i = 0; i < particles.size(); i++) {
         particles[i].density = density_explicit(i);
