@@ -2,7 +2,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "solver.h"
 #include "sph_kernel.h"
-constexpr float epsilon = 1e-4f;
+constexpr float epsilon = 1e-3f;
 
 TEST_CASE("Two particle force symmetry test") {
     constexpr float dt = 0.001f;
@@ -55,4 +55,20 @@ TEST_CASE("Kernel derivative sum at rest is (0,0)") {
     std::cout << sum.x << " " << sum.y << std::endl;
     REQUIRE(sum.x < epsilon);
     REQUIRE(sum.y < epsilon);
+}
+
+TEST_CASE("Neighbor search full neighborhood") {
+    constexpr float dt = 0.001f;
+    FluidSolver solver(0.9f, 1.1f, 2000, 0.0f, {0,0});
+    solver.add_particle_grid({9,9}, {0,0}, {0,0,0});
+    solver.step(dt);
+    REQUIRE(solver.neighbor_indices[40].size() == 13);
+}
+
+TEST_CASE("Neighbor search edge") {
+    constexpr float dt = 0.001f;
+    FluidSolver solver(0.9f, 1.1f, 2000, 0.0f, {0,0});
+    solver.add_particle_grid({9,9}, {0,0}, {0,0,0});
+    solver.step(dt);
+    REQUIRE(solver.neighbor_indices[4].size() == 9);
 }

@@ -10,6 +10,15 @@ float inline quadVertices[] = {
     -1.0f, 1.0f
 };
 
+struct ShaderData {
+    GLuint vao;
+    GLuint shaderProgram;
+    GLint transformLoc;
+    GLint centerLoc;
+    GLint radiusLoc;
+    GLint colorLoc;
+};
+
 std::string loadFile(const std::string& path);
 GLuint createShader(GLenum type, const std::string& source);
 GLuint createShaderProgram(const std::string& vertexShaderSource, const std::string& fragmentShaderSource);

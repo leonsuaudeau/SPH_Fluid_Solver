@@ -11,6 +11,7 @@ public:
     void updateTransform(int screenWidth, int screenHeight);
     [[nodiscard]] glm::mat4 getViewMatrix() const;
     [[nodiscard]] glm::mat4 getProjectionMatrix () const;
+    [[nodiscard]] glm::vec2 getPosition() const;
 private:
     glm::mat4 projection{};
     glm::mat4 view{};

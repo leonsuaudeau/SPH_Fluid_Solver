@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <iostream>
 #include <ranges>
+#include <GLFW/glfw3.h>
 #include <glm/ext/matrix_transform.hpp>
 #include "sph_integrators.h"
 #include "sph_kernel.h"
@@ -110,6 +111,7 @@ void FluidSolver::update_neighbors_parallel() {
 }
 
 void FluidSolver::step(const float dt) {
+    // TODO: measure timing for different parts!
     update_neighbors();
     //update_neighbors_parallel();
 
