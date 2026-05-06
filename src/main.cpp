@@ -41,7 +41,7 @@ void ShowDebugOverlay(float frame_time, float dt, float h, float cfl_lambda, flo
         ImGui::Text("CFL: %.2f", cfl_lambda);
         ImGui::Text("rho_0: %.2f", rho_0);
         ImGui::Text("k: %.2f", k);
-        ImGui::Text("nu: %.2f", nu);
+        ImGui::Text("nu: %.2f ", nu);
         ImGui::Text("Particles: %d", particle_count);
         ImGui::Separator();
         ImGui::Text("Delta time: %.3f ms (%.1f FPS)", frame_time * 1000.0f, 1.0f / frame_time);
@@ -62,10 +62,10 @@ int main() {
     int frame_count = 0;
     std::filesystem::create_directories("../output");
     Camera2D camera(glm::vec2(0, 0), 80, 0.1f);
-    FluidSolver solver(0.9f, 1.1f, 20000, 0.2f, glm::vec2(0, -9.81f));
+    FluidSolver solver(0.9f, 1.1f, 20000, 0.1f, glm::vec2(0, -9.81f));
 
     constexpr float cfl_lambda = 0.4f;
-    const float dt = solver.get_cfl_timestep(cfl_lambda, 120.0f);
+    float dt = solver.get_cfl_timestep(cfl_lambda, 120.0f);
     std::cout << "CLF number: " << dt << std::endl;
 
     // Create GLFW window
@@ -178,6 +178,13 @@ int main() {
             solver.add_particle_grid({3, 70}, {-14, -5}, {0.25,0.25,0.25}, true);
             solver.add_particle_grid({3, 80}, {40, -10}, {0.25,0.25,0.25}, true);
         }
+        if (ImGui::Button("Scene 4")) {
+            solver.clean_particles();
+            solver.add_particle_grid({40, 50}, {-50, -7.3}, {0,0,1});
+            solver.add_particle_grid({100, 3}, {-50, -10}, {0.25,0.25,0.25}, true);
+            solver.add_particle_grid({3, 80}, {-52.7, -10}, {0.25,0.25,0.25}, true);
+            solver.add_particle_grid({3, 80}, {40, -10}, {0.25,0.25,0.25}, true);
+        }
         if (ImGui::Button("Add cubes")) {
             solver.add_particle_grid({10, 10}, {-5, 40}, {1,0,0});
             solver.add_particle_grid({10, 10}, {-5, 60}, {0,1,0});
@@ -224,7 +231,7 @@ int main() {
             glm::vec3 blue{0,0,1};
             float v = glm::length(p.vel);
             //glm::vec3 color = p.color;
-            glm::vec3 color = (p.is_fixed)? p.color : glm::mix(blue, red, log(v + 1e-12) / 5);
+            glm::vec3 color = (p.is_fixed)? p.color : glm::mix(blue, red, log(v + 1e-4) / 5);
 
             glUniform3f(colorLoc, color.r,color.g,color.b);
 
