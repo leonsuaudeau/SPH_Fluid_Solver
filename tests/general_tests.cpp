@@ -57,6 +57,32 @@ TEST_CASE("Kernel derivative sum at rest is (0,0)") {
     REQUIRE(sum.y < epsilon);
 }
 
+TEST_CASE("Cross product between d and kernel derivative is scaled identity matrix") {
+    constexpr float dt = 0.001f;
+    FluidSolver solver(0.9f, 1.1f, 0, 0.0f, {0,0});
+    glm::ivec2 particle_count{9, 9};
+    glm::vec2 grid_origin{0, 0};
+    solver.add_particle_grid(particle_count, grid_origin, {0,0,0});
+    solver.step(dt);
+    glm::mat2 sum{{0,0},{0,0}};
+    for (auto& p_j : solver.get_neighbors(40)) {
+        Particle2D p_i = solver.particles[40];
+        glm::vec2 d = p_i.pos - p_j.pos;
+        sum += glm::outerProduct(d, sph::kernels::cubic_spline_2D_deriv(p_i.pos, p_j.pos, solver.h));
+    }
+    glm::mat2 error = sum * (solver.h * solver.h) + glm::mat2{{1, 0}, {0, 1}};
+
+    float error_norm = 0;
+    for (int j = 0; j < 2; j++) {
+        for (int i = 0; i < 2; i++) {
+            error_norm += error[i][j] * error[i][j];
+        }
+    }
+    error_norm = glm::sqrt(error_norm);
+    std::cout << "Error: " << error_norm * 100 <<  "%" << std::endl;
+    REQUIRE(error_norm < 0.1f);
+}
+
 TEST_CASE("Neighbor search full neighborhood") {
     constexpr float dt = 0.001f;
     FluidSolver solver(0.9f, 1.1f, 2000, 0.0f, {0,0});
