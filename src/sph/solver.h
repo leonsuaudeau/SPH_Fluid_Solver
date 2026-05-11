@@ -5,8 +5,9 @@
 
 class FluidSolver {
 public:
-    FluidSolver(float h, float rho_0, float k, float nu, glm::vec2 g);
-    void step(float dt);
+    FluidSolver(float h, float rho_0, float k, float nu, glm::vec2 g, float cfl_lambda = 0.4f, float max_v = 100.0f);
+    void step();
+    void step(float step_dt);
     void add_particle(glm::vec2 o, glm::vec3 color, bool is_fixed = false);
     void add_particle_grid(glm::ivec2 N, glm::vec2 o, glm::vec3 color, bool is_fixed = false, float r = 0.0f);
     void clean_particles();
@@ -17,10 +18,12 @@ public:
 
     std::vector<Particle2D> particles{};
     std::vector<std::vector<int>> neighbor_indices{};
+    float dt;
     float h;
     float rho_0;
     float k;
     float nu;
+    float cfl;
     glm::vec2 g{};
 
 private:

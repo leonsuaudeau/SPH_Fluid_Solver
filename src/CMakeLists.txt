@@ -5,7 +5,6 @@ add_library(sph_solver
 )
 
 target_include_directories(sph_solver PUBLIC
-        ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/sph
 )
 
@@ -14,7 +13,12 @@ target_link_libraries(sph_solver PUBLIC glm::glm)
 add_executable(SPH_Fluid_Solver
         main.cpp
         camera.cpp
-        shader_utilities.cpp
+        app/application.cpp
+        app/scenes.cpp
+        rendering/particle_renderer.cpp
+        rendering/shader_utilities.cpp
+        rendering/screen_recorder.cpp
+        ui/ui_handling.cpp
 
         ${CMAKE_SOURCE_DIR}/external/imgui/imgui.cpp
         ${CMAKE_SOURCE_DIR}/external/imgui/imgui_demo.cpp
@@ -34,6 +38,9 @@ target_include_directories(SPH_Fluid_Solver PRIVATE
         ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/external/imgui
         ${CMAKE_SOURCE_DIR}/external/imgui/backends
+        ${CMAKE_SOURCE_DIR}/src/app
+        ${CMAKE_SOURCE_DIR}/src/rendering
+        ${CMAKE_SOURCE_DIR}/src/ui
 )
 
 target_compile_definitions(SPH_Fluid_Solver PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD)

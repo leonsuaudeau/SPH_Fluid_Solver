@@ -1,19 +1,18 @@
 #include "solver.h"
 #include <execution>
 #include <algorithm>
-#include <iostream>
-#include <ranges>
-#include <GLFW/glfw3.h>
 #include <glm/ext/matrix_transform.hpp>
 #include "sph_integrators.h"
 #include "sph_kernel.h"
 
-FluidSolver::FluidSolver(const float h, const float rho_0, const float k, const float nu, const glm::vec2 g) {
+FluidSolver::FluidSolver(const float h, const float rho_0, const float k, const float nu, const glm::vec2 g, const float cfl_lambda, const float max_v) {
     this->h = h;
     this->rho_0 = rho_0;
     this->k = k;
     this->nu = nu;
     this->g = g;
+    this->cfl = cfl_lambda;
+    this->dt = get_cfl_timestep(cfl_lambda, max_v);
 }
 
 void FluidSolver::add_particle(const glm::vec2 o, const glm::vec3 color, const bool is_fixed) {
@@ -110,7 +109,7 @@ void FluidSolver::update_neighbors_parallel() {
     });
 }
 
-void FluidSolver::step(const float dt) {
+void FluidSolver::step() {
     // TODO: measure timing for different parts!
     update_neighbors();
     //update_neighbors_parallel();
@@ -135,6 +134,11 @@ void FluidSolver::step(const float dt) {
         p_i.vel = sph::integrators::euler_cromer_vel_step(p_i.vel, p_i.acc, dt);
         p_i.pos = sph::integrators::euler_cromer_pos_step(p_i.pos, p_i.vel, dt);
     }
+}
+
+void FluidSolver::step(const float step_dt) {
+    dt = step_dt;
+    step();
 }
 
 void FluidSolver::clean_particles() {
