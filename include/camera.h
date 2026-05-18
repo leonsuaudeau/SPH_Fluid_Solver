@@ -12,6 +12,7 @@ public:
     [[nodiscard]] glm::mat4 getViewMatrix() const;
     [[nodiscard]] glm::mat4 getProjectionMatrix () const;
     [[nodiscard]] glm::vec2 getPosition() const;
+    [[nodiscard]] float getScale() const;
 private:
     glm::mat4 projection{};
     glm::mat4 view{};

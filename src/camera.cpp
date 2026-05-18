@@ -33,10 +33,14 @@ void Camera2D::updateTransform(const int screenWidth, const int screenHeight) {
     const float aspectRatio = static_cast<float>(screenWidth) / static_cast<float>(screenHeight);
     const float viewHeight = scale;
     const float viewWidth = viewHeight * aspectRatio;
-    projection = glm::ortho(position.x - viewWidth * 0.5f, position.x + viewWidth * 0.5f, position.y - viewHeight * 0.5f, position.y + viewHeight * 0.5f, -1.0f, 1.0f);
+    projection = glm::ortho(-viewWidth * 0.5f, viewWidth * 0.5f, -viewHeight * 0.5f, viewHeight * 0.5f, -1.0f, 1.0f);
     view = glm::translate(glm::mat4(1.0f), glm::vec3(-position, 0.0f));
 }
 
 glm::vec2 Camera2D::getPosition() const {
     return position;
+}
+
+float Camera2D::getScale() const {
+    return scale;
 }

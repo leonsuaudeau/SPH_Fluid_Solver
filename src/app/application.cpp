@@ -7,6 +7,7 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include "scenes.h"
+#include "scene_io.h"
 
 static void glfw_error_callback(int error, const char* description) {
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
@@ -37,6 +38,7 @@ int Application::run() {
     if (!particle_renderer.init()) return 1;
     ImGuiLayer::init(window, main_scale);
 
+    char input_buffer[256] = "";
     double current_time = glfwGetTime();
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -95,6 +97,20 @@ int Application::run() {
         }
         if (ImGui::Button("Add cubes")) {
             Scenes::add_cubes(solver);
+        }
+        if (ImGui::Button("Save custom scene")) {
+            state.currently_typing = true;
+        }
+        if (state.currently_typing) {
+            if (ImGui::InputText("Name", input_buffer, IM_ARRAYSIZE(input_buffer), ImGuiInputTextFlags_EnterReturnsTrue)) {
+                std::string name = input_buffer;
+                SceneIO::save_to_json(solver, name);
+                state.currently_typing = false;
+            }
+        }
+
+        if (ImGui::Button("Load custom scene")) {
+            SceneIO::load_from_json(solver, "test");
         }
         if (ImGui::Button(state.spigot_enabled? "Turn off spigot" : "Turn on spigot")) {
             state.spigot_enabled = !state.spigot_enabled;

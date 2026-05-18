@@ -6,6 +6,8 @@ struct AppState {
     bool recording = false;
     bool spigot_enabled = false;
     bool click_spawn_enabled = false;
+    bool currently_typing = false;
+    bool camera_moving = false;
 
     float spigot_cooldown = 0.0f;
     float recording_frame_time = 0.0f;

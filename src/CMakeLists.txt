@@ -15,6 +15,7 @@ add_executable(SPH_Fluid_Solver
         camera.cpp
         app/application.cpp
         app/scenes.cpp
+        app/scene_io.cpp
         rendering/particle_renderer.cpp
         rendering/shader_utilities.cpp
         rendering/screen_recorder.cpp
@@ -38,6 +39,7 @@ target_include_directories(SPH_Fluid_Solver PRIVATE
         ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/external/imgui
         ${CMAKE_SOURCE_DIR}/external/imgui/backends
+        ${CMAKE_SOURCE_DIR}/external/nlohmann
         ${CMAKE_SOURCE_DIR}/src/app
         ${CMAKE_SOURCE_DIR}/src/rendering
         ${CMAKE_SOURCE_DIR}/src/ui
