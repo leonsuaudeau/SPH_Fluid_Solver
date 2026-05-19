@@ -50,3 +50,20 @@ void ParticleRenderer::render(const FluidSolver &solver, const Camera2D &camera,
     }
     glBindVertexArray(0);
 }
+
+void ParticleRenderer::render(const std::vector<Particle2D> &particles, const float radius, const Camera2D &camera, int width, int height) const {
+    glm::mat4 cameraTransform = camera.getProjectionMatrix() * camera.getViewMatrix() * glm::mat4(1.0f);
+
+    glBindVertexArray(vao);
+    for (const auto& p : particles) {
+        glUniformMatrix4fv(transform_loc, 1, GL_FALSE, &cameraTransform[0][0]);
+        glUniform2f(center_loc, p.pos.x, p.pos.y);
+        glUniform1f(radius_loc, radius);
+        const glm::vec3 color = p.color;
+
+        glUniform3f(color_loc, color.r,color.g,color.b);
+
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+    }
+    glBindVertexArray(0);
+}

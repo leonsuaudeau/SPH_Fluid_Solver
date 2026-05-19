@@ -8,6 +8,7 @@ class ParticleRenderer {
 public:
     bool init();
     void render(const FluidSolver &solver, const Camera2D &camera, int width, int height) const;
+    void render(const std::vector<Particle2D> &particles, float radius, const Camera2D &camera, int width, int height) const;
 private:
     GLuint shader_program = 0;
     GLuint vao = 0;

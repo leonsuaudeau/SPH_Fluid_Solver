@@ -12,15 +12,16 @@ FluidSolver::FluidSolver(const float h, const float rho_0, const float k, const 
     this->nu = nu;
     this->g = g;
     this->cfl = cfl_lambda;
-    this->dt = get_cfl_timestep(cfl_lambda, max_v);
+    this->max_v = max_v;
+    update_cfl_timestep();
 }
 
 void FluidSolver::add_particle(const glm::vec2 o, const glm::vec3 color, const bool is_fixed) {
-    particles.emplace_back(Particle2D(o, glm::vec2(0), glm::vec2(0), particle_mass(), 0, rho_0, color, is_fixed));
+    particles.emplace_back(Particle2D(o, glm::vec2(0), glm::vec2(0), get_particle_mass(), 0, rho_0, color, is_fixed));
 }
 
 void FluidSolver::add_particle_grid(const glm::ivec2 N, const glm::vec2 o, const glm::vec3 color, const bool is_fixed, const float r) {
-    const float m_i = particle_mass();
+    const float m_i = get_particle_mass();
     const glm::mat4 R = glm::rotate(glm::mat4(1.0f), glm::radians(r), glm::vec3(0,0,1));
     for (int y = 0; y < N.y; y++ ) {
         for (int x = 0; x < N.x; x++) {
@@ -31,7 +32,13 @@ void FluidSolver::add_particle_grid(const glm::ivec2 N, const glm::vec2 o, const
     }
 }
 
-float FluidSolver::particle_mass() const {
+void FluidSolver::add_particle_grid(const std::vector<Particle2D> &p_other) {
+    for (auto &p : p_other) {
+        this->particles.emplace_back(p);
+    }
+}
+
+float FluidSolver::get_particle_mass() const {
     return h * h * rho_0;
 }
 
@@ -154,6 +161,6 @@ std::vector<Particle2D> FluidSolver::get_neighbors(const int i) {
     return neighbors;
 }
 
-float FluidSolver::get_cfl_timestep(const float lambda, const float max_v) const {
-    return lambda * h / max_v;
+void FluidSolver::update_cfl_timestep() {
+    dt = cfl * h / max_v;
 }

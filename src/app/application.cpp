@@ -2,24 +2,50 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <cstdio>
+#include <ctime>
 #include <filesystem>
+#include <iostream>
 #include <glm/vec2.hpp>
+
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
+#include <glm/ext/matrix_transform.hpp>
+
+#include "glfw_user_pointer.h"
+#include "imgui_impl_opengl3_loader.h"
 #include "scenes.h"
 #include "scene_io.h"
+
+constexpr ImGuiWindowFlags global_flags = ImGuiWindowFlags_AlwaysAutoResize;
 
 static void glfw_error_callback(int error, const char* description) {
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
+static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
+    const GLFWUserPointer *user_pointer = static_cast<GLFWUserPointer*> (glfwGetWindowUserPointer(window));
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+        if (user_pointer->state.placement_tool_active) {
+            user_pointer->state.rect_r += glm::radians(-glm::sign(yoffset));
+        }
+    }else {
+        user_pointer->camera.zoom(-yoffset);
+    }
+}
+
 Application::Application() :
     camera(glm::vec2(0, 0), 80, 0.1f),
-    solver(0.9f, 1.1f, 20000, 0.1f, glm::vec2(0, -9.81f), 0.4f, 120.0f) {}
+    solver(0.9f, 1.1f, 20000, 0.5f, glm::vec2(0, -9.81f), 0.4f, 400.0f) {
+
+    // Load files in scene path once
+    scenes = SceneIO::get_scene_entries("scenes/");
+    snapshots = SceneIO::get_scene_entries("snapshots/");
+    std::filesystem::create_directories("../../output");
+
+    preview_particles = {};
+}
 
 int Application::run() {
-    std::filesystem::create_directories("../output");
-
     // Create GLFW window
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) return 1;
@@ -35,19 +61,42 @@ int Application::run() {
     glfwMakeContextCurrent(window);
     glfwSwapInterval(0); // vsync
 
+    glfwSetScrollCallback(window, scroll_callback);
+    GLFWUserPointer user_pointer(camera, state);
+    glfwSetWindowUserPointer(window, &user_pointer);
+
     if (!particle_renderer.init()) return 1;
     ImGuiLayer::init(window, main_scale);
 
-    char input_buffer[256] = "";
     double current_time = glfwGetTime();
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(window, true);
         // TODO: replace by mouse controls, mouse3 and dragging for move, scroll for zoom
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) camera.move(0, 1);
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) camera.move(0, -1);
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) camera.move(-1, 0);
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) camera.move(1, 0);
+        if (!state.currently_typing) {
+            // THIS IS ABSOLUTELY HORRIBLE!!!!!!
+            if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !state.space_last_pressed && state.app_mode != edit_scene) {
+                state.paused = !state.paused;
+                state.space_last_pressed = true;
+            }
+            if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS && !state.tab_last_pressed) {
+                state.app_mode = (state.app_mode == simulate) ? edit_scene : simulate;
+                state.paused = true;
+                state.tab_last_pressed = true;
+            }
+            if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE && state.space_last_pressed) {
+                state.space_last_pressed = false;
+            }
+            if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE && state.tab_last_pressed) {
+                state.tab_last_pressed = false;
+            }
+
+            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) camera.move(0, 1);
+            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) camera.move(0, -1);
+            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) camera.move(-1, 0);
+            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) camera.move(1, 0);
+        }else {
+            if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) state.currently_typing = false;
+        }
 
         if (!state.paused) {
             solver.step();
@@ -63,65 +112,17 @@ int Application::run() {
 
         ImGuiLayer::beginFrame();
         ImGui::SetNextWindowSizeConstraints( ImVec2(200, 0), ImVec2(FLT_MAX, FLT_MAX));
-        ImGuiWindowFlags flags = ImGuiWindowFlags_AlwaysAutoResize;
 
-        if (state.click_spawn_enabled && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::GetIO().WantCaptureMouse) {
-            double x, y;
-            int display_w, display_h;
-            glfwGetCursorPos(window, &x, &y);
-            glfwGetFramebufferSize(window, &display_w, &display_h);
-            const float ndcX = (2.0f * x) / display_w - 1.0f;
-            const float ndcY = 1.0f - (2.0f * y) / display_h;
-            const glm::mat4 inv_vp = glm::inverse(camera.getProjectionMatrix() * camera.getViewMatrix());
-            glm::vec4 world_pos = inv_vp * glm::vec4(ndcX, ndcY, 0.0f, 1.0f);
-            world_pos /= world_pos.w;
-
-            solver.add_particle({world_pos.x, world_pos.y}, {1,0,0});
-        }
-
-        ImGui::Begin("Simulation control", nullptr, flags);
-        if (ImGui::Button(state.paused ? "Resume" : "Pause")) {
-            state.paused = !state.paused;
-        }
-        if (ImGui::Button("Scene 1")) {
-            Scenes::load_scene_1(solver);
-        }
-        if (ImGui::Button("Scene 2")) {
-            Scenes::load_scene_2(solver);
-        }
-        if (ImGui::Button("Scene 3")) {
-            Scenes::load_scene_3(solver);
-        }
-        if (ImGui::Button("Scene 4")) {
-            Scenes::load_scene_4(solver);
-        }
-        if (ImGui::Button("Add cubes")) {
-            Scenes::add_cubes(solver);
-        }
-        if (ImGui::Button("Save custom scene")) {
-            state.currently_typing = true;
-        }
-        if (state.currently_typing) {
-            if (ImGui::InputText("Name", input_buffer, IM_ARRAYSIZE(input_buffer), ImGuiInputTextFlags_EnterReturnsTrue)) {
-                std::string name = input_buffer;
-                SceneIO::save_to_json(solver, name);
-                state.currently_typing = false;
-            }
-        }
-
-        if (ImGui::Button("Load custom scene")) {
-            SceneIO::load_from_json(solver, "test");
-        }
-        if (ImGui::Button(state.spigot_enabled? "Turn off spigot" : "Turn on spigot")) {
-            state.spigot_enabled = !state.spigot_enabled;
-        }
-        if (ImGui::Button(state.click_spawn_enabled? "Mouse spawn particle off" : "Mouse spawn particle on")) {
-            state.click_spawn_enabled = !state.click_spawn_enabled;
+        ImGui::Begin("Mode select", nullptr, global_flags);
+        ImGui::Text(state.app_mode == simulate? "Simulate" : "Edit scene");
+        if (ImGui::Button("Switch")) {
+            state.app_mode = (state.app_mode == simulate) ? edit_scene : simulate;
+            state.paused = true; // always pause when switching states
         }
         ImGui::End();
 
         ImGui::SetNextWindowSizeConstraints( ImVec2(200, 0), ImVec2(FLT_MAX, FLT_MAX));
-        ImGui::Begin("Camera control", nullptr, flags);
+        ImGui::Begin("Camera control", nullptr, global_flags);
         if (ImGui::Button("Reset")) {
             camera.setPosition(0, 0);
         }
@@ -129,6 +130,16 @@ int Application::run() {
             state.recording = !state.recording;
         }
         ImGui::End();
+
+        switch (state.app_mode) {
+            case simulate:
+                ui_simulate();
+                break;
+            case edit_scene:
+                ui_scene_editor();
+                break;
+        }
+
         Ui::set_debug_overlay(state, solver, camera);
 
         int display_w, display_h;
@@ -136,6 +147,9 @@ int Application::run() {
 
         camera.updateTransform(display_w, display_h);
         particle_renderer.render(solver, camera, display_w, display_h);
+        if (state.app_mode == edit_scene) {
+            particle_renderer.render(preview_particles, solver.h / 2.0f, camera, display_w, display_h);
+        }
         screen_recorder.update(solver.dt, state.recording, display_w, display_h);
 
         ImGuiLayer::render();
@@ -149,4 +163,176 @@ int Application::run() {
     glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
+}
+
+void Application::ui_simulate() {
+    ImGui::SetNextWindowSizeConstraints( ImVec2(300, 0), ImVec2(FLT_MAX, FLT_MAX));
+
+    ImGui::Begin("Simulation control", nullptr, global_flags);
+    if (ImGui::Button(state.paused ? "Resume" : "Pause")) {
+        state.paused = !state.paused;
+    }
+    /*
+    if (ImGui::Button("Scene 1")) {
+        Scenes::load_scene_1(solver);
+    }
+    if (ImGui::Button("Scene 2")) {
+        Scenes::load_scene_2(solver);
+    }
+    if (ImGui::Button("Scene 3")) {
+        Scenes::load_scene_3(solver);
+    }
+    if (ImGui::Button("Scene 4")) {
+        Scenes::load_scene_4(solver);
+    }
+    */
+    /* Snapshots */
+    ImGui::TextColored(ImVec4(1,1,0,1), "Snapshots");
+    if (ImGui::Button("Save snapshot")) {
+        const time_t timestamp = time(nullptr);
+        const tm datetime = *localtime(&timestamp);
+        char output[50];
+        strftime(output, 50, "%y:%m:%d:%I:%M:%S", &datetime);
+
+        const std::string name = "snapshot " + static_cast<std::string>(output);
+        SceneIO::save_to_json(solver, name, "snapshots/");
+        snapshots = SceneIO::get_scene_entries("snapshots/");
+    }
+    ImGui::BeginChild("Scrolling", ImVec2(280, 80), ImGuiChildFlags_None);
+    int id = 0;
+    for (auto &entry: snapshots) {
+        ImGui::PushID(id++);
+        ImGui::TextColored(ImVec4(0,1,0,1), entry.c_str());
+        ImGui::SameLine();
+        if (ImGui::Button("load")) {
+            SceneIO::load_from_json(solver, entry, "snapshots/");
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("X")) {
+            SceneIO::remove_scene_entry(entry, "snapshots/");
+            snapshots = SceneIO::get_scene_entries("snapshots/");
+        }
+        ImGui::PopID();
+    }
+    ImGui::EndChild();
+
+    ImGui::TextColored(ImVec4(1,1,0,1), "Set parameters");
+    ImGui::InputFloat("h", &solver.h);
+    if (ImGui::InputFloat("CFL", &solver.cfl)) {
+        solver.update_cfl_timestep();
+    }
+    ImGui::InputFloat("rho_0", &solver.rho_0);
+    ImGui::InputFloat("k", &solver.k);
+    ImGui::InputFloat("nu", &solver.nu);
+    if (ImGui::InputFloat("max_v", &solver.max_v)) {
+        solver.update_cfl_timestep();
+    }
+
+    if (ImGui::Button("Add cubes")) {
+        Scenes::add_cubes(solver);
+    }
+    if (ImGui::Button(state.spigot_enabled? "Turn off spigot" : "Turn on spigot")) {
+        state.spigot_enabled = !state.spigot_enabled;
+    }
+    ImGui::End();
+}
+
+void Application::ui_scene_editor() {
+    ImGui::Begin("Editor control", nullptr, global_flags);
+
+    ImGui::TextColored(ImVec4(1,1,0,1), "Scenes");
+    if (ImGui::Button("Save custom scene")) {
+        state.currently_typing = true;
+    }
+    if (state.currently_typing) {
+        if (ImGui::InputText("Name", state.input_buffer0, 24, ImGuiInputTextFlags_EnterReturnsTrue)) {
+            std::string name = state.input_buffer0;
+            SceneIO::save_to_json(solver, name, "scenes/");
+            scenes = SceneIO::get_scene_entries("scenes/");
+            state.currently_typing = false;
+        }
+    }
+
+    ImGui::BeginChild("Scrolling", ImVec2(280, 140), ImGuiChildFlags_None);
+    int id = 0;
+    for (auto &entry: scenes) {
+        ImGui::PushID(id++);
+        ImGui::TextColored(ImVec4(0,1,0,1), entry.c_str());
+        ImGui::SameLine();
+        if (ImGui::Button("load")) {
+            SceneIO::load_from_json(solver, entry, "scenes/");
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("X")) {
+            SceneIO::remove_scene_entry(entry, "scenes/");
+            scenes = SceneIO::get_scene_entries("scenes/");
+        }
+        ImGui::PopID();
+    }
+    ImGui::EndChild();
+
+    if (ImGui::Button("Placement tool")) {
+        state.placement_tool_active = !state.placement_tool_active;
+    }
+    ImGui::End();
+
+    if (state.placement_tool_active) {
+        ImGui::SetNextWindowSizeConstraints( ImVec2(200, 100), ImVec2(200, FLT_MAX));
+        ImGui::Begin("Placement tool", &state.placement_tool_active, ImGuiWindowFlags_MenuBar);
+        if (ImGui::BeginMenuBar())
+        {
+            if (ImGui::BeginMenu("Shape"))
+            {
+                if (ImGui::MenuItem("Single Particle", "Ctrl+P")) { state.editor_mode = single; }
+                if (ImGui::MenuItem("Rectangle", "Ctrl+R"))   { state.editor_mode = rectangle; }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenuBar();
+        }
+        ImGui::ColorEdit4("Color", &state.selected_color[0]);
+        ImGui::Checkbox("Boundary", &state.place_boundary);
+        ImGui::SameLine();
+        ImGui::Checkbox("Remove", &state.edit_delete);
+        if (state.editor_mode == rectangle) {
+            ImGui::InputInt2("n", state.rect_n);
+            ImGui::SliderAngle("r", &state.rect_r);
+        }
+
+        if (ImGui::Button("Place") || (ImGui::IsKeyPressed(ImGuiKey_Enter) && !state.currently_typing)) {
+            solver.add_particle_grid(preview_particles);
+        }
+        if (ImGui::Button("Clear")) {
+            solver.particles.clear();
+        }
+        ImGui::End();
+
+        preview_particles.clear(); // TODO: maybe we can only update when something actually changes?
+        const glm::vec3 color{state.selected_color[0], state.selected_color[1], state.selected_color[2]};
+        const float m_i = solver.get_particle_mass();
+
+        if (ImGui::IsMouseDragging(ImGuiMouseButton_Left) && !ImGui::GetIO().WantCaptureMouse) {
+            state.placement_origin = camera.get_cursor_world_pos(window);
+        }
+
+        // TODO: no particle overlap, I need to use a grid or something for initialisation!
+        // TODO: make it possible to avoid storing parameters
+
+        if (state.editor_mode == rectangle) {
+            const glm::mat4 R = glm::rotate(glm::mat4(1.0f), state.rect_r, glm::vec3(0,0,1));
+            const float x_offset = 0.5f * state.rect_n[0] * solver.h;
+            const float y_offset = 0.5f * state.rect_n[1] * solver.h;
+            for (int x = 0; x < state.rect_n[0]; x++) {
+                for (int y = 0; y < state.rect_n[1]; y++) {
+                    glm::vec4 r_pos = glm::vec4(x - x_offset, y - y_offset, 0.0f, 0.0f) * R;
+                    const glm::vec2 pos = state.placement_origin + glm::vec2(r_pos.x, r_pos.y) * solver.h;
+                    preview_particles.emplace_back(Particle2D(pos, glm::vec2(0), glm::vec2(0), m_i, 0, solver.rho_0, color, state.place_boundary));
+                }
+            }
+        }else {
+            const glm::vec2 pos = state.placement_origin + glm::vec2(state.rect_n[0], state.rect_n[1]) * solver.h;
+            preview_particles.emplace_back(Particle2D(pos, glm::vec2(0), glm::vec2(0), m_i, 0, solver.rho_0, color, state.place_boundary));
+        }
+    }else {
+        preview_particles.clear();
+    }
 }

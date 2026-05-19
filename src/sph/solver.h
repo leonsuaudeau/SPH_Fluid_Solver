@@ -10,11 +10,13 @@ public:
     void step(float step_dt);
     void add_particle(glm::vec2 o, glm::vec3 color, bool is_fixed = false);
     void add_particle_grid(glm::ivec2 N, glm::vec2 o, glm::vec3 color, bool is_fixed = false, float r = 0.0f);
+    void add_particle_grid(const std::vector<Particle2D> &p_other);
     void clean_particles();
     [[nodiscard]] int get_num_particles() const {return particles.size();}
     [[nodiscard]] float get_particle_density(int i) const {return particles[i].density;}
     std::vector<Particle2D> get_neighbors(int i);
-    [[nodiscard]] float get_cfl_timestep(float lambda, float max_v) const;
+    void update_cfl_timestep();
+    [[nodiscard]] float get_particle_mass() const;
 
     std::vector<Particle2D> particles{};
     std::vector<std::vector<int>> neighbor_indices{};
@@ -24,6 +26,7 @@ public:
     float k;
     float nu;
     float cfl;
+    float max_v;
     glm::vec2 g{};
 
 private:
@@ -32,7 +35,6 @@ private:
     [[nodiscard]] glm::vec2 pressure_acceleration(int i) const;
     [[nodiscard]] glm::vec2 viscosity_acceleration(int i) const;
     [[nodiscard]] glm::vec2 gravity_acceleration(int i) const;
-    [[nodiscard]] float particle_mass() const;
     void update_neighbors();
     void update_neighbors_parallel();
 };

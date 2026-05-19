@@ -12,7 +12,7 @@ void ScreenRecorder::update(const float dt, const bool enabled, const int width,
         std::vector<unsigned char> pixels(width * height * 3);
         glPixelStorei(GL_PACK_ALIGNMENT, 1);
         glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
-        std::ofstream out("../output/frame_" + std::to_string(frame_count++) + ".ppm", std::ios::binary);
+        std::ofstream out("../../output/frame_" + std::to_string(frame_count++) + ".ppm", std::ios::binary);
         out << "P6\n" << width << " " << height << "\n255\n";
 
         for (int y = height - 1; y >= 0; --y) {

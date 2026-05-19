@@ -3,7 +3,8 @@
 void Scenes::load_scene_1(FluidSolver &solver) {
     solver.clean_particles();
     solver.add_particle({0,10}, {1,0,0});
-    solver.add_particle_grid({40, 3}, {-20, -10}, {0.25,0.25,0.25}, true);
+    solver.add_particle_grid({20, 2}, {-20 * solver.h, -10}, {0.25,0.25,0.25}, true);
+    solver.add_particle_grid({20, 2}, {0 * solver.h, -10}, {0.25,0.25,0.25}, true);
 }
 
 void Scenes::load_scene_2(FluidSolver &solver) {

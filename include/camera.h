@@ -1,5 +1,8 @@
 #ifndef SPH_FLUID_SOLVER_CAMERA_H
 #define SPH_FLUID_SOLVER_CAMERA_H
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+
 #include "glm/glm.hpp"
 
 class Camera2D {
@@ -13,6 +16,7 @@ public:
     [[nodiscard]] glm::mat4 getProjectionMatrix () const;
     [[nodiscard]] glm::vec2 getPosition() const;
     [[nodiscard]] float getScale() const;
+    glm::vec2 get_cursor_world_pos(GLFWwindow* window) const;
 private:
     glm::mat4 projection{};
     glm::mat4 view{};
