@@ -1,5 +1,6 @@
 add_library(sph_solver
         sph/solver.cpp
+        sph/data_structure.cpp
         sph/sph_kernel.h
         sph/sph_integrators.h
 )

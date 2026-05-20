@@ -8,8 +8,8 @@
 class FluidSolver {
 public:
     FluidSolver(float dt, float h, float rho_0, float k, float nu, glm::vec2 g);
-    void step();
-    void step(float step_dt);
+    void step(DataStructure::Grid &grid);
+    void step(DataStructure::Grid &grid, float step_dt);
     void add_particle(glm::vec2 o, glm::vec3 color, bool is_fixed = false);
     void add_particle_grid(glm::ivec2 N, glm::vec2 o, glm::vec3 color, bool is_fixed = false, float r = 0.0f);
     void add_particle_grid(const std::vector<Particle2D> &p_other);

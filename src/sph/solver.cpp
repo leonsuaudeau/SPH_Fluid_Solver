@@ -1,6 +1,8 @@
 #include "solver.h"
 #include <execution>
 #include <algorithm>
+#include <iostream>
+#include <ostream>
 #include <glm/ext/matrix_transform.hpp>
 #include "sph_integrators.h"
 #include "sph_kernel.h"
@@ -115,10 +117,13 @@ void FluidSolver::update_neighbors_parallel() {
     });
 }
 
-void FluidSolver::step() {
+void FluidSolver::step(DataStructure::Grid &grid) {
     // TODO: measure timing for different parts!
     max_v = 0.0f;
-    update_neighbors();
+    grid.populate_cells();
+    neighbor_indices = grid.calculate_neighbors(h);
+    std::vector<int> temp_remove_indices;
+    //update_neighbors();
     //update_neighbors_parallel();
 
     for (int i = 0; i < particles.size(); i++) {
@@ -141,12 +146,20 @@ void FluidSolver::step() {
         p_i.vel = sph::integrators::euler_cromer_vel_step(p_i.vel, p_i.acc, dt);
         if (const float v_abs = glm::length(p_i.vel); v_abs > max_v) max_v = v_abs; // update for cfl
         p_i.pos = sph::integrators::euler_cromer_pos_step(p_i.pos, p_i.vel, dt);
+        if (!grid.is_inside_grid(i)) {
+            temp_remove_indices.push_back(i);
+        }
+    }
+
+    for (const int i : temp_remove_indices) {
+        particles[i] = particles.back();
+        particles.pop_back();
     }
 }
 
-void FluidSolver::step(const float step_dt) {
+void FluidSolver::step(DataStructure::Grid &grid, const float step_dt) {
     dt = step_dt;
-    step();
+    step(grid);
 }
 
 void FluidSolver::clean_particles() {

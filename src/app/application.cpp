@@ -35,7 +35,8 @@ static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) 
 
 Application::Application() :
     camera(glm::vec2(0, 0), 80, 0.1f),
-    solver(0.001f, 0.9f, 1.1f, 20000, 0.5f, glm::vec2(0, -9.81f)) {
+    solver(0.001f, 0.9f, 1.1f, 20000, 0.5f, glm::vec2(0, -9.81f)),
+    grid(512, 512, {-256, -256}, solver){
 
     // Load files in scene path once
     scenes = SceneIO::get_scene_entries("scenes/");
@@ -99,7 +100,7 @@ int Application::run() {
         }
 
         if (!state.paused) {
-            solver.step();
+            solver.step(grid);
             state.spigot_cooldown += solver.dt;
             if (state.spigot_enabled && state.spigot_cooldown > 0.05f) {
                 state.spigot_cooldown = 0;

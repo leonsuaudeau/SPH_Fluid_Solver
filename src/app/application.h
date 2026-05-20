@@ -21,6 +21,7 @@ private:
     GLFWwindow*window = nullptr;
     Camera2D camera;
     FluidSolver solver;
+    DataStructure::Grid grid;
     AppState state;
     ParticleRenderer particle_renderer;
     ScreenRecorder screen_recorder;
