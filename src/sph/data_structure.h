@@ -14,14 +14,12 @@ namespace DataStructure {
     struct Grid {
         Grid (int width, int height, glm::vec2 origin, FluidSolver &solver);
         void populate_cells();
-        [[nodiscard]] int get_cell_index(int i) const;
+        [[nodiscard]] glm::ivec2 get_cell_index(int i) const;
         [[nodiscard]] std::vector<std::vector<int>> calculate_neighbors(float h) const;
-        [[nodiscard]] bool is_inside_grid(int i) const;
+        bool is_inside(int x, int y) const;
 
         std::vector<Particle2D> &particles;
-        std::vector<Cell> cells;
-        int neighbor_offsets[25];
-        int max_cell;
+        std::vector<std::vector<Cell>> cells;
         float cell_size;
         int width, height;
         glm::vec2 origin{};

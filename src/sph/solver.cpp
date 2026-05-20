@@ -146,7 +146,7 @@ void FluidSolver::step(DataStructure::Grid &grid) {
         p_i.vel = sph::integrators::euler_cromer_vel_step(p_i.vel, p_i.acc, dt);
         if (const float v_abs = glm::length(p_i.vel); v_abs > max_v) max_v = v_abs; // update for cfl
         p_i.pos = sph::integrators::euler_cromer_pos_step(p_i.pos, p_i.vel, dt);
-        if (!grid.is_inside_grid(i)) {
+        if (grid.get_cell_index(i).x == -1) {
             temp_remove_indices.push_back(i);
         }
     }
