@@ -5,15 +5,14 @@
 #include "sph_integrators.h"
 #include "sph_kernel.h"
 
-FluidSolver::FluidSolver(const float h, const float rho_0, const float k, const float nu, const glm::vec2 g, const float cfl_lambda, const float max_v) {
+FluidSolver::FluidSolver(const float dt, const float h, const float rho_0, const float k, const float nu, const glm::vec2 g) {
+    this->dt = dt;
     this->h = h;
     this->rho_0 = rho_0;
     this->k = k;
     this->nu = nu;
     this->g = g;
-    this->cfl = cfl_lambda;
-    this->max_v = max_v;
-    update_cfl_timestep();
+    this->max_v = 0;
 }
 
 void FluidSolver::add_particle(const glm::vec2 o, const glm::vec3 color, const bool is_fixed) {
@@ -118,6 +117,7 @@ void FluidSolver::update_neighbors_parallel() {
 
 void FluidSolver::step() {
     // TODO: measure timing for different parts!
+    max_v = 0.0f;
     update_neighbors();
     //update_neighbors_parallel();
 
@@ -139,6 +139,7 @@ void FluidSolver::step() {
         Particle2D &p_i = particles[i];
         if (p_i.is_fixed) continue;
         p_i.vel = sph::integrators::euler_cromer_vel_step(p_i.vel, p_i.acc, dt);
+        if (const float v_abs = glm::length(p_i.vel); v_abs > max_v) max_v = v_abs; // update for cfl
         p_i.pos = sph::integrators::euler_cromer_pos_step(p_i.pos, p_i.vel, dt);
     }
 }
@@ -161,6 +162,6 @@ std::vector<Particle2D> FluidSolver::get_neighbors(const int i) {
     return neighbors;
 }
 
-void FluidSolver::update_cfl_timestep() {
-    dt = cfl * h / max_v;
+float FluidSolver::get_cfl_lambda() const {
+    return dt * max_v / h;
 }

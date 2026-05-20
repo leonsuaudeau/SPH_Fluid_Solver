@@ -1,11 +1,13 @@
 #ifndef SPH_FLUID_SOLVER_SOLVER_H
 #define SPH_FLUID_SOLVER_SOLVER_H
 #include <vector>
+
+#include "data_structure.h"
 #include "particle.h"
 
 class FluidSolver {
 public:
-    FluidSolver(float h, float rho_0, float k, float nu, glm::vec2 g, float cfl_lambda = 0.4f, float max_v = 100.0f);
+    FluidSolver(float dt, float h, float rho_0, float k, float nu, glm::vec2 g);
     void step();
     void step(float step_dt);
     void add_particle(glm::vec2 o, glm::vec3 color, bool is_fixed = false);
@@ -15,7 +17,7 @@ public:
     [[nodiscard]] int get_num_particles() const {return particles.size();}
     [[nodiscard]] float get_particle_density(int i) const {return particles[i].density;}
     std::vector<Particle2D> get_neighbors(int i);
-    void update_cfl_timestep();
+    [[nodiscard]] float get_cfl_lambda() const;
     [[nodiscard]] float get_particle_mass() const;
 
     std::vector<Particle2D> particles{};
@@ -25,7 +27,6 @@ public:
     float rho_0;
     float k;
     float nu;
-    float cfl;
     float max_v;
     glm::vec2 g{};
 

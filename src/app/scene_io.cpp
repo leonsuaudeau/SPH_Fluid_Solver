@@ -18,7 +18,6 @@ void SceneIO::load_from_json(FluidSolver &solver, const std::string &name, const
     solver.rho_0 = json["rho_0"];
     solver.k = json["k"];
     solver.nu = json["nu"];
-    solver.cfl = json["cfl"];
     solver.g = {json["g"][0], json["g"][1]};
     std::string data_file = json["data_file"];
 
@@ -45,7 +44,6 @@ void SceneIO::save_to_json(FluidSolver &solver, const std::string &name, const s
     json["rho_0"] = solver.rho_0;
     json["k"] = solver.k;
     json["nu"] = solver.nu;
-    json["cfl"] = solver.cfl;
     json["g"] = {solver.g.x, solver.g.y};
     json["data_file"] = relative_path + root + name + ".bin";
 

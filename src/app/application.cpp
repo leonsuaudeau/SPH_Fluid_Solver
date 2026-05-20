@@ -35,7 +35,7 @@ static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) 
 
 Application::Application() :
     camera(glm::vec2(0, 0), 80, 0.1f),
-    solver(0.9f, 1.1f, 20000, 0.5f, glm::vec2(0, -9.81f), 0.4f, 400.0f) {
+    solver(0.001f, 0.9f, 1.1f, 20000, 0.5f, glm::vec2(0, -9.81f)) {
 
     // Load files in scene path once
     scenes = SceneIO::get_scene_entries("scenes/");
@@ -217,16 +217,11 @@ void Application::ui_simulate() {
     ImGui::EndChild();
 
     ImGui::TextColored(ImVec4(1,1,0,1), "Set parameters");
+    ImGui::InputFloat("dt", &solver.dt);
     ImGui::InputFloat("h", &solver.h);
-    if (ImGui::InputFloat("CFL", &solver.cfl)) {
-        solver.update_cfl_timestep();
-    }
     ImGui::InputFloat("rho_0", &solver.rho_0);
     ImGui::InputFloat("k", &solver.k);
     ImGui::InputFloat("nu", &solver.nu);
-    if (ImGui::InputFloat("max_v", &solver.max_v)) {
-        solver.update_cfl_timestep();
-    }
 
     if (ImGui::Button("Add cubes")) {
         Scenes::add_cubes(solver);

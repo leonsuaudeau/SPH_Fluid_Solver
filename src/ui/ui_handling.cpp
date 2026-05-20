@@ -24,7 +24,7 @@ void Ui::set_debug_overlay(const AppState &state, const FluidSolver &solver, con
         ImGuiWindowFlags_NoMove;
 
     if (ImGui::Begin("DebugOverlay", nullptr, flags)) {
-        ImGui::Text("dt: %.4f", solver.dt);
+        ImGui::Text("cfl: %.4f", solver.get_cfl_lambda());
         ImGui::Text("Particles: %d", solver.get_num_particles());
         ImGui::Separator();
         ImGui::Text("Delta time: %.3f ms (%.1f FPS)", state.frame_time * 1000.0f, 1.0f / state.frame_time);
