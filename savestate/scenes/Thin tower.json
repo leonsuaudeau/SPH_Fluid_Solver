@@ -1,5 +1,6 @@
 {
-    "data_file": "../../savestate/scenes/big dam break.bin",
+    "cfl": 0.4000000059604645,
+    "data_file": "../../savestate/scenes/Thin tower.bin",
     "dt": 0.0029999997932463884,
     "g": [
         0.0,
