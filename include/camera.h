@@ -1,9 +1,9 @@
 #ifndef SPH_FLUID_SOLVER_CAMERA_H
 #define SPH_FLUID_SOLVER_CAMERA_H
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
 
 #include "glm/glm.hpp"
+
+struct GLFWwindow;
 
 class Camera2D {
 public:

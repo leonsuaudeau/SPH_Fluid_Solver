@@ -1,6 +1,5 @@
 #include "particle_renderer.h"
 #include "shader_utilities.h"
-#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <cmath>
 #include <cstdio>

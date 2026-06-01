@@ -4,7 +4,8 @@
 
 enum AppMode {
     simulate,
-    edit_scene
+    edit_scene,
+    view_plot
 };
 
 enum EditorMode {
@@ -44,6 +45,13 @@ struct AppState {
     int recorded_frame_count = 0;
 
     double frame_time = 0.0;
+
+    // statistics
+    bool plot_enabled = false;
+    bool move_with_plot = false;
+    double x_min = -1.0, x_max = 60.0, y_min = 0.7, y_max = 1.4;
+    int stat_seq_index = 0;
+    float stat_seq_time = 0;
 };
 
 #endif //SPH_FLUID_SOLVER_APP_STATE_H

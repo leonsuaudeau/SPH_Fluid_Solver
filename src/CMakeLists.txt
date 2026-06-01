@@ -17,6 +17,7 @@ add_executable(SPH_Fluid_Solver
         app/application.cpp
         app/scenes.cpp
         app/scene_io.cpp
+        app/statistics.cpp
         rendering/particle_renderer.cpp
         rendering/shader_utilities.cpp
         rendering/screen_recorder.cpp
@@ -30,6 +31,9 @@ add_executable(SPH_Fluid_Solver
         ${CMAKE_SOURCE_DIR}/external/imgui/backends/imgui_impl_glfw.cpp
         ${CMAKE_SOURCE_DIR}/external/imgui/backends/imgui_impl_opengl3.cpp
         ${CMAKE_SOURCE_DIR}/external/imgui/misc/cpp/imgui_stdlib.cpp
+
+        ${CMAKE_SOURCE_DIR}/external/implot/implot.cpp
+        ${CMAKE_SOURCE_DIR}/external/implot/implot_items.cpp
 )
 
 target_compile_definitions(SPH_Fluid_Solver PRIVATE
@@ -40,13 +44,16 @@ target_include_directories(SPH_Fluid_Solver PRIVATE
         ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/external/imgui
         ${CMAKE_SOURCE_DIR}/external/imgui/backends
+        ${CMAKE_SOURCE_DIR}/external/implot
         ${CMAKE_SOURCE_DIR}/external/nlohmann
         ${CMAKE_SOURCE_DIR}/src/app
         ${CMAKE_SOURCE_DIR}/src/rendering
         ${CMAKE_SOURCE_DIR}/src/ui
 )
 
-target_compile_definitions(SPH_Fluid_Solver PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD)
+target_compile_definitions(SPH_Fluid_Solver PRIVATE
+        GLFW_INCLUDE_NONE
+)
 
 target_link_libraries(SPH_Fluid_Solver PRIVATE
         sph_solver

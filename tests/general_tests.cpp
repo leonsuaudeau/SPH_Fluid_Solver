@@ -5,33 +5,33 @@
 constexpr float epsilon = 1e-3f;
 
 TEST_CASE("Two particle force symmetry test") {
-    constexpr float dt = 0.001f;
-    FluidSolver solver(0.9f, 1.1f, 2000, 0.0f, {0,0});
+    FluidSolver solver(0.001f, 0.9f, 1.1f, 2000, 0.0f, {0,0});
+    DataStructure::Grid grid(512, 512, {-256, -256}, solver);
     solver.add_particle({0,0}, {1,0,0});
     solver.add_particle({0.05f, 0}, {0,1,0});
-    solver.step(dt);
+    solver.step(grid);
 
     REQUIRE(glm::length(solver.particles[0].acc + solver.particles[1].acc) < epsilon);
 }
 
 TEST_CASE("No ext. force, density equals rest density") {
-    constexpr float dt = 0.001f;
-    FluidSolver solver(0.9f, 1.1f, 2000, 0.0f, {0,0});
+    FluidSolver solver(0.001f, 0.9f, 1.1f, 2000, 0.0f, {0,0});
+    DataStructure::Grid grid(512, 512, {-256, -256}, solver);
     glm::ivec2 particle_count{9, 9};
     glm::vec2 grid_origin{0, 0};
     solver.add_particle_grid(particle_count, grid_origin, {0,0,0});
-    solver.step(dt);
+    solver.step(grid);
 
     REQUIRE(glm::abs(solver.particles[40].density - solver.rho_0) < epsilon);
 }
 
 TEST_CASE("Kernel sum with full neighborhood is h^-2") {
-    constexpr float dt = 0.001f;
-    FluidSolver solver(0.9f, 1.1f, 2000, 0.0f, {0,0});
+    FluidSolver solver(0.001f, 0.9f, 1.1f, 2000, 0.0f, {0,0});
+    DataStructure::Grid grid(512, 512, {-256, -256}, solver);
     glm::ivec2 particle_count{9, 9};
     glm::vec2 grid_origin{0, 0};
     solver.add_particle_grid(particle_count, grid_origin, {0,0,0});
-    solver.step(dt);
+    solver.step(grid);
     float sum = 0;
     for (auto& p_j : solver.get_neighbors(40)) {
         sum += sph::kernels::cubic_spline_2D(solver.particles[40].pos, p_j.pos, solver.h);
@@ -42,12 +42,12 @@ TEST_CASE("Kernel sum with full neighborhood is h^-2") {
 }
 
 TEST_CASE("Kernel derivative sum at rest is (0,0)") {
-    constexpr float dt = 0.001f;
-    FluidSolver solver(0.9f, 1.1f, 2000, 0.0f, {0,0});
+    FluidSolver solver(0.001f, 0.9f, 1.1f, 2000, 0.0f, {0,0});
+    DataStructure::Grid grid(512, 512, {-256, -256}, solver);
     glm::ivec2 particle_count{9, 9};
     glm::vec2 grid_origin{0, 0};
     solver.add_particle_grid(particle_count, grid_origin, {0,0,0});
-    solver.step(dt);
+    solver.step(grid);
     glm::vec2 sum{0,0};
     for (auto& p_j : solver.get_neighbors(40)) {
         sum += sph::kernels::cubic_spline_2D_deriv(solver.particles[40].pos, p_j.pos, solver.h);
@@ -58,12 +58,12 @@ TEST_CASE("Kernel derivative sum at rest is (0,0)") {
 }
 
 TEST_CASE("Cross product between d and kernel derivative is scaled identity matrix") {
-    constexpr float dt = 0.001f;
-    FluidSolver solver(0.9f, 1.1f, 0, 0.0f, {0,0});
+    FluidSolver solver(0.001f, 0.9f, 1.1f, 0, 0.0f, {0,0});
+    DataStructure::Grid grid(512, 512, {-256, -256}, solver);
     glm::ivec2 particle_count{9, 9};
     glm::vec2 grid_origin{0, 0};
     solver.add_particle_grid(particle_count, grid_origin, {0,0,0});
-    solver.step(dt);
+    solver.step(grid);
     glm::mat2 sum{{0,0},{0,0}};
     for (auto& p_j : solver.get_neighbors(40)) {
         Particle2D p_i = solver.particles[40];
@@ -84,17 +84,17 @@ TEST_CASE("Cross product between d and kernel derivative is scaled identity matr
 }
 
 TEST_CASE("Neighbor search full neighborhood") {
-    constexpr float dt = 0.001f;
-    FluidSolver solver(0.9f, 1.1f, 2000, 0.0f, {0,0});
+    FluidSolver solver(0.001f, 0.9f, 1.1f, 2000, 0.0f, {0,0});
+    DataStructure::Grid grid(512, 512, {-256, -256}, solver);
     solver.add_particle_grid({9,9}, {0,0}, {0,0,0});
-    solver.step(dt);
+    solver.step(grid);
     REQUIRE(solver.neighbor_indices[40].size() == 13);
 }
 
 TEST_CASE("Neighbor search edge") {
-    constexpr float dt = 0.001f;
-    FluidSolver solver(0.9f, 1.1f, 2000, 0.0f, {0,0});
+    FluidSolver solver(0.001f, 0.9f, 1.1f, 2000, 0.0f, {0,0});
+    DataStructure::Grid grid(512, 512, {-256, -256}, solver);
     solver.add_particle_grid({9,9}, {0,0}, {0,0,0});
-    solver.step(dt);
+    solver.step(grid);
     REQUIRE(solver.neighbor_indices[4].size() == 9);
 }

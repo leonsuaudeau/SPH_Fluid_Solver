@@ -1,9 +1,10 @@
 #include "ui_handling.h"
-#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
+
+#include "implot.h"
 
 void Ui::set_debug_overlay(const AppState &state, const FluidSolver &solver, const Camera2D &camera) {
     //ImGuiIO& io = ImGui::GetIO();
@@ -37,6 +38,7 @@ void Ui::set_debug_overlay(const AppState &state, const FluidSolver &solver, con
 
 void ImGuiLayer::init(GLFWwindow *window, const float scale) {
     ImGui::CreateContext();
+    ImPlot::CreateContext();
     ImGui::StyleColorsDark();
     ImGuiStyle& style = ImGui::GetStyle();
     style.ScaleAllSizes(scale);
@@ -61,6 +63,7 @@ void ImGuiLayer::shutdown() {
     /* // TODO: figure out reason for segfault (exit code 139)
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
+    ImPlot::DestroyContext();
     ImGui::DestroyContext();
     */
 }

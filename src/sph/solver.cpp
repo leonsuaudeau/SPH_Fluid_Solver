@@ -1,9 +1,11 @@
 #include "solver.h"
 #include <execution>
 #include <algorithm>
+#include <iostream>
 #include <glm/ext/matrix_transform.hpp>
 #include "sph_integrators.h"
 #include "sph_kernel.h"
+#include "../app/statistics.h"
 
 FluidSolver::FluidSolver(const float dt, const float h, const float rho_0, const float k, const float nu, const glm::vec2 g) {
     this->dt = dt;
@@ -153,11 +155,6 @@ void FluidSolver::step(DataStructure::Grid &grid) {
         particles[i] = particles.back();
         particles.pop_back();
     }
-}
-
-void FluidSolver::step(DataStructure::Grid &grid, const float step_dt) {
-    dt = step_dt;
-    step(grid);
 }
 
 void FluidSolver::clean_particles() {

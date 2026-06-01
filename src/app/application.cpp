@@ -1,20 +1,20 @@
 #include "application.h"
-#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <cstdio>
 #include <ctime>
 #include <filesystem>
-#include <iostream>
 #include <glm/vec2.hpp>
 
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
+#include <iostream>
 #include <glm/ext/matrix_transform.hpp>
 
 #include "glfw_user_pointer.h"
-#include "imgui_impl_opengl3_loader.h"
 #include "scenes.h"
 #include "scene_io.h"
+
+#include <implot.h>
 
 constexpr ImGuiWindowFlags global_flags = ImGuiWindowFlags_AlwaysAutoResize;
 
@@ -24,6 +24,7 @@ static void glfw_error_callback(int error, const char* description) {
 
 static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     const GLFWUserPointer *user_pointer = static_cast<GLFWUserPointer*> (glfwGetWindowUserPointer(window));
+    if (ImGui::GetIO().WantCaptureMouse) return;
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
         if (user_pointer->state.placement_tool_active) {
             user_pointer->state.rect_r += glm::radians(-glm::sign(yoffset));
@@ -44,6 +45,8 @@ Application::Application() :
     std::filesystem::create_directories("../../output");
 
     preview_particles = {};
+    stat_seq.rho_avg[0] = 0;
+    stat_seq.time[0] = 0;
 }
 
 int Application::run() {
@@ -115,10 +118,16 @@ int Application::run() {
         ImGui::SetNextWindowSizeConstraints( ImVec2(200, 0), ImVec2(FLT_MAX, FLT_MAX));
 
         ImGui::Begin("Mode select", nullptr, global_flags);
-        ImGui::Text(state.app_mode == simulate? "Simulate" : "Edit scene");
-        if (ImGui::Button("Switch")) {
-            state.app_mode = (state.app_mode == simulate) ? edit_scene : simulate;
-            state.paused = true; // always pause when switching states
+        if (ImGui::Button("Simulate")) {
+            state.app_mode = simulate;
+        }
+        if (ImGui::Button("Edit Scene")) {
+            state.app_mode = edit_scene;
+            state.paused = true;
+        }
+        if (ImGui::Button("View Statistics")) {
+            state.app_mode = view_plot;
+            state.paused = true;
         }
         ImGui::End();
 
@@ -138,6 +147,9 @@ int Application::run() {
                 break;
             case edit_scene:
                 ui_scene_editor();
+                break;
+            case view_plot:
+                ui_view_plot();
                 break;
         }
 
@@ -224,6 +236,10 @@ void Application::ui_simulate() {
     ImGui::InputFloat("k", &solver.k);
     ImGui::InputFloat("nu", &solver.nu);
 
+    if (ImGui::Button("Live statistics")) {
+        state.plot_enabled = !state.plot_enabled;
+    }
+
     if (ImGui::Button("Add cubes")) {
         Scenes::add_cubes(solver);
     }
@@ -231,6 +247,56 @@ void Application::ui_simulate() {
         state.spigot_enabled = !state.spigot_enabled;
     }
     ImGui::End();
+
+    // We also want to update the plot if it is not shown
+    if (!state.paused && state.stat_seq_index < stats::MAX_MEMORY - 1) {
+        float rho_avg = 0;
+        for (const auto &p: solver.particles) {
+            rho_avg += p.density;
+        }
+        rho_avg /= static_cast<float>(solver.get_num_particles());
+
+        stat_seq.rho_avg[state.stat_seq_index] = rho_avg;
+        stat_seq.time[state.stat_seq_index] = state.stat_seq_time;
+        state.stat_seq_index++;
+        state.stat_seq_time += solver.dt;
+    }
+
+    if (state.plot_enabled) {
+        ImGui::SetNextWindowSizeConstraints( ImVec2(600, 0), ImVec2(FLT_MAX, FLT_MAX));
+        ImGui::Begin("Live statistics", &state.plot_enabled);
+        char info_text[1024];
+        sprintf(info_text, "%d / %d datapoints", state.stat_seq_index, stats::MAX_MEMORY - 1);
+        ImGui::TextColored(ImVec4(1,1,0,1), info_text);
+        if (state.stat_seq_index >= stats::MAX_MEMORY - 1) {
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(1,0,0,1), "MAXIMUM PLOT LENGTH, PLEASE RESET");
+        }
+        if (ImPlot::BeginPlot("Plot")) {
+            if (state.move_with_plot) {
+                const double width = state.x_max - state.x_min;
+                state.x_min = state.stat_seq_time - width / 2;
+                state.x_max = state.stat_seq_time + width / 2;
+            }
+            ImPlot::SetupAxisLinks(ImAxis_X1, &state.x_min, &state.x_max);
+            ImPlot::SetupAxisLinks(ImAxis_Y1, &state.y_min, &state.y_max);
+            ImPlot::PlotInfLines("Rest density", &solver.rho_0, 1, {ImPlotProp_Flags, ImPlotInfLinesFlags_Horizontal});
+            ImPlot::PlotLine("Average density", stat_seq.time, stat_seq.rho_avg, state.stat_seq_index);
+            ImPlot::EndPlot();
+        }
+        ImGui::Checkbox("Follow plot", &state.move_with_plot);
+        ImGui::SameLine();
+        if (ImGui::Button("Reset plot")) {
+            const double width = state.x_max - state.x_min;
+            state.x_min = -1.0;
+            state.x_max = width - 1;
+            stat_seq.rho_avg[0] = 0;
+            stat_seq.time[0] = 0;
+            state.stat_seq_index = 0;
+            state.stat_seq_time = 0;
+        }
+        ImGui::End();
+    }
 }
 
 void Application::ui_scene_editor() {
@@ -331,4 +397,9 @@ void Application::ui_scene_editor() {
     }else {
         preview_particles.clear();
     }
+}
+
+void Application::ui_view_plot() {
+    ImGui::Begin("Statistics viewer", nullptr);
+    ImGui::End();
 }

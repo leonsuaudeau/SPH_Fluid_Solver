@@ -7,6 +7,7 @@
 #include "particle_renderer.h"
 #include "solver.h"
 #include "screen_recorder.h"
+#include "statistics.h"
 #include "ui_handling.h"
 
 struct GLFWwindow;
@@ -17,6 +18,7 @@ public:
     int run();
     void ui_scene_editor();
     void ui_simulate();
+    void ui_view_plot();
 private:
     GLFWwindow*window = nullptr;
     Camera2D camera;
@@ -29,6 +31,7 @@ private:
     std::vector<std::string> scenes;
     std::vector<std::string> snapshots;
     std::vector<Particle2D> preview_particles;
+    stats::Sequence stat_seq{};
 };
 
 #endif //SPH_FLUID_SOLVER_APPLICATION_H

@@ -1,6 +1,8 @@
 #ifndef SPH_FLUID_SOLVER_GLFW_USER_POINTER_H
 #define SPH_FLUID_SOLVER_GLFW_USER_POINTER_H
-#include "camera.h"
+
+class Camera2D;
+struct AppState;
 
 struct GLFWUserPointer {
     Camera2D &camera;
