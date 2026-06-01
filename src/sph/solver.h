@@ -1,7 +1,6 @@
 #ifndef SPH_FLUID_SOLVER_SOLVER_H
 #define SPH_FLUID_SOLVER_SOLVER_H
 #include <vector>
-
 #include "data_structure.h"
 #include "particle.h"
 

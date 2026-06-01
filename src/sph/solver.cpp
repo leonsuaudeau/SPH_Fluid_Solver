@@ -1,8 +1,6 @@
 #include "solver.h"
 #include <execution>
 #include <algorithm>
-#include <iostream>
-#include <ostream>
 #include <glm/ext/matrix_transform.hpp>
 #include "sph_integrators.h"
 #include "sph_kernel.h"
@@ -133,7 +131,7 @@ void FluidSolver::step(DataStructure::Grid &grid) {
 
     for (int i = 0; i < particles.size(); i++) {
         Particle2D &p_i = particles[i];
-        if (p_i.is_fixed) continue;
+        //if (p_i.is_fixed) continue;
         p_i.acc = glm::vec2(0);
         p_i.acc += gravity_acceleration(i);
         p_i.acc += viscosity_acceleration(i);
