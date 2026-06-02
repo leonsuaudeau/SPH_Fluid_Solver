@@ -32,6 +32,9 @@ void Ui::set_debug_overlay(const AppState &state, const FluidSolver &solver, con
         ImGui::Text("Camera:");
         glm::vec2 cam_pos = camera.getPosition();
         ImGui::Text("x: %.2f y: %.2f", cam_pos.x, cam_pos.y);
+        if (state.selected_particle_index >= 0) {
+            ImGui::Text("Selected particle: %d", state.selected_particle_index);
+        }
     }
     ImGui::End();
 }

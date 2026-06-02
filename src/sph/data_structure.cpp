@@ -11,12 +11,16 @@ DataStructure::Grid::Grid(const int width, const int height, const glm::vec2 ori
     this->origin = origin;
 }
 
-glm::ivec2 DataStructure::Grid::get_cell_index(const int i) const {
-    const glm::vec2 diff = particles[i].pos - origin;
+glm::ivec2 DataStructure::Grid::get_cell_index(const glm::vec2 pos) const {
+    const glm::vec2 diff = pos - origin;
     const int x = diff.x / cell_size;
     const int y = diff.y / cell_size;
     if (!is_inside(x, y)) return {-1, -1};
     return {x, y};
+}
+
+glm::ivec2 DataStructure::Grid::get_cell_index(const int i) const {
+    return get_cell_index(particles[i].pos);
 }
 
 bool DataStructure::Grid::is_inside(const int x, const int y) const {

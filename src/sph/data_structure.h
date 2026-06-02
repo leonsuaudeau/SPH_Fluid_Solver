@@ -15,6 +15,7 @@ namespace DataStructure {
         Grid (int width, int height, glm::vec2 origin, FluidSolver &solver);
         void populate_cells();
         [[nodiscard]] glm::ivec2 get_cell_index(int i) const;
+        [[nodiscard]] glm::ivec2 get_cell_index(glm::vec2 pos) const;
         [[nodiscard]] std::vector<std::vector<int>> calculate_neighbors(float h) const;
         bool is_inside(int x, int y) const;
 

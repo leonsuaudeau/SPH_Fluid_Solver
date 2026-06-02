@@ -2,6 +2,8 @@
 #define SPH_FLUID_SOLVER_APP_STATE_H
 #include <glm/vec2.hpp>
 
+#include "particle.h"
+
 enum AppMode {
     simulate,
     edit_scene,
@@ -23,6 +25,10 @@ struct AppState {
     char input_buffer0[32] = "";
     char input_buffer1[32] = "";
     char input_buffer2[32] = "";
+
+    // visual
+    int selected_particle_index = -1;
+    bool draw_neighbors = false;
 
     // editor
     bool placement_tool_active = true;

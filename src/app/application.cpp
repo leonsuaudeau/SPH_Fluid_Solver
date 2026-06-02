@@ -85,6 +85,7 @@ int Application::run() {
             if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS && !state.tab_last_pressed) {
                 state.app_mode = (state.app_mode == simulate) ? edit_scene : simulate;
                 state.paused = true;
+                state.selected_particle_index = -1;
                 state.tab_last_pressed = true;
             }
             if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE && state.space_last_pressed) {
@@ -124,10 +125,12 @@ int Application::run() {
         if (ImGui::Button("Edit Scene")) {
             state.app_mode = edit_scene;
             state.paused = true;
+            state.selected_particle_index = -1;
         }
         if (ImGui::Button("View Statistics")) {
             state.app_mode = view_plot;
             state.paused = true;
+            state.selected_particle_index = -1;
         }
         ImGui::End();
 
@@ -159,7 +162,7 @@ int Application::run() {
         glfwGetFramebufferSize(window, &display_w, &display_h);
 
         camera.updateTransform(display_w, display_h);
-        particle_renderer.render(solver, camera, display_w, display_h);
+        particle_renderer.render(solver, state, camera, display_w, display_h);
         if (state.app_mode == edit_scene) {
             particle_renderer.render(preview_particles, solver.h / 2.0f, camera, display_w, display_h);
         }
@@ -180,6 +183,25 @@ int Application::run() {
 
 void Application::ui_simulate() {
     ImGui::SetNextWindowSizeConstraints( ImVec2(300, 0), ImVec2(FLT_MAX, FLT_MAX));
+
+    // handle particle selection
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::GetIO().WantCaptureMouse) {
+        const glm::vec2 mouse_pos = camera.get_cursor_world_pos(window);
+        const glm::ivec2 index = grid.get_cell_index(mouse_pos);
+        float min_dist = 100;
+        for (int offset_x = -1; offset_x < 2; offset_x++) {
+            for (int offset_y = -1; offset_y < 2; offset_y++) {
+                for (const auto& i: grid.cells[index.x + offset_x][index.y + offset_y].p_indices) {
+                    const float dist = glm::length(mouse_pos - solver.particles[i].pos);
+                    if (dist < min_dist) {
+                        min_dist = dist;
+                        state.selected_particle_index = i;
+                    }
+                }
+            }
+        }
+        if (min_dist > 99) state.selected_particle_index = -1;
+    }
 
     ImGui::Begin("Simulation control", nullptr, global_flags);
     if (ImGui::Button(state.paused ? "Resume" : "Pause")) {
@@ -246,6 +268,7 @@ void Application::ui_simulate() {
     if (ImGui::Button(state.spigot_enabled? "Turn off spigot" : "Turn on spigot")) {
         state.spigot_enabled = !state.spigot_enabled;
     }
+    ImGui::Checkbox("Highlight neighbors", &state.draw_neighbors);
     ImGui::End();
 
     // We also want to update the plot if it is not shown
@@ -308,7 +331,7 @@ void Application::ui_scene_editor() {
     }
     if (state.currently_typing) {
         if (ImGui::InputText("Name", state.input_buffer0, 24, ImGuiInputTextFlags_EnterReturnsTrue)) {
-            std::string name = state.input_buffer0;
+            const std::string name = state.input_buffer0;
             SceneIO::save_to_json(solver, name, "scenes/");
             scenes = SceneIO::get_scene_entries("scenes/");
             state.currently_typing = false;
@@ -385,7 +408,7 @@ void Application::ui_scene_editor() {
             const float y_offset = 0.5f * state.rect_n[1] * solver.h;
             for (int x = 0; x < state.rect_n[0]; x++) {
                 for (int y = 0; y < state.rect_n[1]; y++) {
-                    glm::vec4 r_pos = glm::vec4(x - x_offset, y - y_offset, 0.0f, 0.0f) * R;
+                    const glm::vec4 r_pos = glm::vec4(x - x_offset, y - y_offset, 0.0f, 0.0f) * R;
                     const glm::vec2 pos = state.placement_origin + glm::vec2(r_pos.x, r_pos.y) * solver.h;
                     preview_particles.emplace_back(Particle2D(pos, glm::vec2(0), glm::vec2(0), m_i, 0, solver.rho_0, color, state.place_boundary));
                 }
