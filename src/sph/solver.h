@@ -37,6 +37,7 @@ private:
     [[nodiscard]] float pressure(int i) const;
     [[nodiscard]] glm::vec2 pressure_acceleration(int i) const;
     [[nodiscard]] glm::vec2 viscosity_acceleration(int i) const;
+    [[nodiscard]] glm::vec2 combined_acceleration(int i) const;
     [[nodiscard]] glm::vec2 gravity_acceleration(int i) const;
     void update_neighbors();
     void update_neighbors_parallel();

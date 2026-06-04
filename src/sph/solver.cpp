@@ -1,11 +1,9 @@
 #include "solver.h"
 #include <execution>
 #include <algorithm>
-#include <iostream>
 #include <glm/ext/matrix_transform.hpp>
 #include "sph_integrators.h"
 #include "sph_kernel.h"
-#include "../app/statistics.h"
 
 FluidSolver::FluidSolver(const float dt, const float h, const float rho_0, const float k, const float nu, const glm::vec2 g) {
     this->dt = dt;
@@ -80,6 +78,31 @@ glm::vec2 FluidSolver::viscosity_acceleration(const int i) const {
     return 2 * nu * sum;
 }
 
+glm::vec2 FluidSolver::combined_acceleration(const int i) const {
+    const Particle2D &p_i = particles[i];
+    auto pressure_sum = glm::vec2(0);
+    auto viscosity_sum = glm::vec2(0);
+
+    const glm::vec2 pos_i = p_i.pos;
+    const glm::vec2 vel_i = p_i.vel;
+    const float density_i = p_i.density;
+    const float inv_density_i = 1.0f / density_i;
+    const float i_frac = p_i.pressure * inv_density_i * inv_density_i;
+    const float eps = 0.01f * h * h;
+
+    for (const auto j : neighbor_indices[i]) {
+        const Particle2D &p_j = particles[j];
+        const glm::vec2 kernel_deriv = sph::kernels::cubic_spline_2D_deriv(pos_i, p_j.pos, h);
+        glm::vec2 x_ij = p_j.pos - pos_i;
+        glm::vec2 v_ij = p_j.vel - vel_i;
+
+        pressure_sum += p_j.mass * (i_frac + p_j.pressure / (p_j.density * p_j.density)) * kernel_deriv;
+        viscosity_sum += p_j.mass / p_j.density * dot(v_ij, x_ij) / (dot(x_ij, x_ij) + eps) * kernel_deriv;
+    }
+
+    return -pressure_sum + 2.0f * nu * viscosity_sum;
+}
+
 glm::vec2 FluidSolver::gravity_acceleration(int i) const {
     const Particle2D &p_i = particles[i];
     return g / p_i.mass;
@@ -90,7 +113,7 @@ void FluidSolver::update_neighbors() {
     for (int i = 0; i < particles.size(); i++) {
         neighbor_indices.emplace_back();
         for (int j = 0; j < particles.size(); j++) {
-            if (const float d = length(particles[j].pos - particles[i].pos); d <= 2 * h) {
+            if (glm::vec2 d = particles[j].pos - particles[i].pos; glm::dot(d, d) <= 4.0f*h*h) {
                 neighbor_indices[i].push_back(j);
             }
         }
@@ -108,8 +131,7 @@ void FluidSolver::update_neighbors_parallel() {
         const Particle2D &p_i = particles[i];
         for (int j = 0; j < particles.size(); j++) {
                 const Particle2D &p_j = particles[j];
-            glm::vec2 d = p_j.pos - p_i.pos;
-            if (glm::dot(d, d) <= (2*h)*(2*h)) {
+                if (glm::vec2 d = p_j.pos - p_i.pos; glm::dot(d, d) <= 4.0f*h*h) {
                     local.push_back(j);
             }
         }
@@ -118,10 +140,10 @@ void FluidSolver::update_neighbors_parallel() {
 }
 
 void FluidSolver::step(DataStructure::Grid &grid) {
-    // TODO: measure timing for different parts!
-    max_v = 0.0f;
+    float max_v2 = 0.0f;
+
     grid.populate_cells();
-    neighbor_indices = grid.calculate_neighbors(h);
+    grid.calculate_neighbors(h, neighbor_indices);
     std::vector<int> temp_remove_indices;
     //update_neighbors();
     //update_neighbors_parallel();
@@ -136,20 +158,25 @@ void FluidSolver::step(DataStructure::Grid &grid) {
         //if (p_i.is_fixed) continue;
         p_i.acc = glm::vec2(0);
         p_i.acc += gravity_acceleration(i);
-        p_i.acc += viscosity_acceleration(i);
-        p_i.acc += pressure_acceleration(i);
+        p_i.acc += combined_acceleration(i);
+        //p_i.acc += viscosity_acceleration(i);
+        //p_i.acc += pressure_acceleration(i);
     }
 
     for (int i = 0; i < particles.size(); i++) {
         Particle2D &p_i = particles[i];
         if (p_i.is_fixed) continue;
         p_i.vel = sph::integrators::euler_cromer_vel_step(p_i.vel, p_i.acc, dt);
-        if (const float v_abs = glm::length(p_i.vel); v_abs > max_v) max_v = v_abs; // update for cfl
+
+        if (const float v2 = glm::dot(p_i.vel, p_i.vel); v2 > max_v2) max_v2 = v2; // update for cfl
+
         p_i.pos = sph::integrators::euler_cromer_pos_step(p_i.pos, p_i.vel, dt);
         if (grid.get_cell_index(i).x == -1) {
             temp_remove_indices.push_back(i);
         }
     }
+
+    max_v = std::sqrt(max_v2);
 
     for (const int i : temp_remove_indices) {
         particles[i] = particles.back();

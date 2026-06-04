@@ -1,4 +1,11 @@
 #include "data_structure.h"
+#include <execution>
+#include <algorithm>
+#include <iostream>
+#include <numeric>
+#include <set>
+#include <thread>
+
 #include "solver.h"
 
 DataStructure::Grid::Grid(const int width, const int height, const glm::vec2 origin, FluidSolver &solver):
@@ -41,8 +48,16 @@ void DataStructure::Grid::populate_cells() {
     }
 }
 
-std::vector<std::vector<int>> DataStructure::Grid::calculate_neighbors(const float h) const {
-    std::vector<std::vector<int>> neighbor_indices;
+void DataStructure::Grid::calculate_neighbors(const float h, std::vector<std::vector<int>> &neighbor_indices) const {
+    const float radius2 = 4.0f * h * h + 0.0001f;
+
+    neighbor_indices.resize(particles.size());
+    for (auto& n : neighbor_indices) {
+        n.clear();
+        if (n.capacity() < 16) {
+            n.reserve(16);
+        }
+    }
     for (int i = 0; i < particles.size(); i++) {
         neighbor_indices.emplace_back();
         const glm::ivec2 c_i = get_cell_index(i);
@@ -52,12 +67,12 @@ std::vector<std::vector<int>> DataStructure::Grid::calculate_neighbors(const flo
                 const glm::ivec2 c_j = c_i + glm::ivec2(o_x, o_y);
                 if (!is_inside(c_j.x, c_j.y)) continue;
                 for (const int j : cells[c_j.x][c_j.y].p_indices) {
-                    if (const float d = length(particles[j].pos - particles[i].pos); d <= 2 * h) {
+                    const glm::vec2 r = particles[j].pos - particles[i].pos;
+                    if (const float d2 = glm::dot(r, r); d2 < radius2) {
                         neighbor_indices[i].push_back(j);
                     }
                 }
             }
         }
     }
-    return neighbor_indices;
 }

@@ -275,6 +275,7 @@ void Application::ui_simulate() {
     if (!state.paused && state.stat_seq_index < stats::MAX_MEMORY - 1) {
         float rho_avg = 0;
         for (const auto &p: solver.particles) {
+            if (p.is_fixed) continue;
             rho_avg += p.density;
         }
         rho_avg /= static_cast<float>(solver.get_num_particles());

@@ -16,7 +16,7 @@ namespace DataStructure {
         void populate_cells();
         [[nodiscard]] glm::ivec2 get_cell_index(int i) const;
         [[nodiscard]] glm::ivec2 get_cell_index(glm::vec2 pos) const;
-        [[nodiscard]] std::vector<std::vector<int>> calculate_neighbors(float h) const;
+        void calculate_neighbors(float h, std::vector<std::vector<int>> &neighbor_indices) const;
         bool is_inside(int x, int y) const;
 
         std::vector<Particle2D> &particles;
