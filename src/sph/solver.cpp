@@ -144,7 +144,7 @@ void FluidSolver::step(DataStructure::Grid &grid) {
 
     grid.populate_cells();
     grid.calculate_neighbors(h, neighbor_indices);
-    std::vector<int> temp_remove_indices;
+
     //update_neighbors();
     //update_neighbors_parallel();
 
@@ -171,12 +171,18 @@ void FluidSolver::step(DataStructure::Grid &grid) {
         if (const float v2 = glm::dot(p_i.vel, p_i.vel); v2 > max_v2) max_v2 = v2; // update for cfl
 
         p_i.pos = sph::integrators::euler_cromer_pos_step(p_i.pos, p_i.vel, dt);
+    }
+
+    max_v = std::sqrt(max_v2);
+
+    // Doing the removal process here to avoid data races in multithreading
+    std::vector<int> temp_remove_indices;
+
+    for (int i = 0; i < particles.size(); i++) {
         if (grid.get_cell_index(i).x == -1) {
             temp_remove_indices.push_back(i);
         }
     }
-
-    max_v = std::sqrt(max_v2);
 
     for (const int i : temp_remove_indices) {
         particles[i] = particles.back();

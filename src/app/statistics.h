@@ -6,6 +6,9 @@ namespace stats {
     constexpr int MAX_MEMORY = 1000000;
     struct Sequence{
         float rho_avg[MAX_MEMORY];
+        float rho_avg_no_surface[MAX_MEMORY];
+        float density_error[MAX_MEMORY];
+        float density_error_no_surface[MAX_MEMORY];
         float time[MAX_MEMORY];
     };
 

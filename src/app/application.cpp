@@ -46,6 +46,9 @@ Application::Application() :
 
     preview_particles = {};
     stat_seq.rho_avg[0] = 0;
+    stat_seq.rho_avg_no_surface[0] = 0;
+    stat_seq.density_error[0] = 0;
+    stat_seq.density_error_no_surface[0] = 0;
     stat_seq.time[0] = 0;
 }
 
@@ -271,22 +274,33 @@ void Application::ui_simulate() {
     ImGui::Checkbox("Highlight neighbors", &state.draw_neighbors);
     ImGui::End();
 
-    // We also want to update the plot if it is not shown
-    if (!state.paused && state.stat_seq_index < stats::MAX_MEMORY - 1) {
-        float rho_avg = 0;
-        for (const auto &p: solver.particles) {
-            if (p.is_fixed) continue;
-            rho_avg += p.density;
-        }
-        rho_avg /= static_cast<float>(solver.get_num_particles());
-
-        stat_seq.rho_avg[state.stat_seq_index] = rho_avg;
-        stat_seq.time[state.stat_seq_index] = state.stat_seq_time;
-        state.stat_seq_index++;
-        state.stat_seq_time += solver.dt;
-    }
-
     if (state.plot_enabled) {
+        // Update plot values
+        if (!state.paused && state.stat_seq_index < stats::MAX_MEMORY - 1) {
+            float rho_avg = 0;
+            float rho_avg_no_surface = 0;
+
+            for (const auto &p: solver.particles) {
+                if (p.is_fixed) continue;
+                rho_avg += p.density;
+
+                if (p.density < solver.rho_0) continue;
+                rho_avg_no_surface += p.density;
+            }
+            rho_avg /= static_cast<float>(solver.get_num_particles());
+            rho_avg_no_surface /= static_cast<float>(solver.get_num_particles());
+
+            stat_seq.rho_avg[state.stat_seq_index] = rho_avg;
+            stat_seq.rho_avg_no_surface[state.stat_seq_index] = rho_avg_no_surface;
+            stat_seq.density_error[state.stat_seq_index] = rho_avg - solver.rho_0;
+            stat_seq.density_error_no_surface[state.stat_seq_index] = rho_avg_no_surface - solver.rho_0;
+
+            stat_seq.time[state.stat_seq_index] = state.stat_seq_time;
+            state.stat_seq_index++;
+            state.stat_seq_time += solver.dt;
+        }
+
+        // Show plot
         ImGui::SetNextWindowSizeConstraints( ImVec2(600, 0), ImVec2(FLT_MAX, FLT_MAX));
         ImGui::Begin("Live statistics", &state.plot_enabled);
         char info_text[1024];
@@ -305,6 +319,7 @@ void Application::ui_simulate() {
             ImPlot::SetupAxisLinks(ImAxis_X1, &state.x_min, &state.x_max);
             ImPlot::SetupAxisLinks(ImAxis_Y1, &state.y_min, &state.y_max);
             ImPlot::PlotInfLines("Rest density", &solver.rho_0, 1, {ImPlotProp_Flags, ImPlotInfLinesFlags_Horizontal});
+            ImPlot::PlotLine("Average density error", stat_seq.time, stat_seq.density_error, state.stat_seq_index);
             ImPlot::PlotLine("Average density", stat_seq.time, stat_seq.rho_avg, state.stat_seq_index);
             ImPlot::EndPlot();
         }
@@ -315,6 +330,9 @@ void Application::ui_simulate() {
             state.x_min = -1.0;
             state.x_max = width - 1;
             stat_seq.rho_avg[0] = 0;
+            stat_seq.rho_avg_no_surface[0] = 0;
+            stat_seq.density_error[0] = 0;
+            stat_seq.density_error_no_surface[0] = 0;
             stat_seq.time[0] = 0;
             state.stat_seq_index = 0;
             state.stat_seq_time = 0;
