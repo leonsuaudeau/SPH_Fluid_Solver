@@ -55,7 +55,7 @@ struct AppState {
     // statistics
     bool plot_enabled = false;
     bool move_with_plot = false;
-    double x_min = -1.0, x_max = 60.0, y_min = 0.7, y_max = 1.4;
+    double x_min = -1.0, x_max = 60.0, y_min = -0.1, y_max = 0.1;
     int stat_seq_index = 0;
     float stat_seq_time = 0;
 };
