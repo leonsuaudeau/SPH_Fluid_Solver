@@ -9,7 +9,7 @@ target_include_directories(sph_solver PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/sph
 )
 
-target_link_libraries(sph_solver PUBLIC glm::glm)
+target_link_libraries(sph_solver PRIVATE glm::glm OpenMP::OpenMP_CXX)
 
 add_executable(SPH_Fluid_Solver
         main.cpp
@@ -61,4 +61,5 @@ target_link_libraries(SPH_Fluid_Solver PRIVATE
         OpenGL::GL
         glfw
         glad
+        OpenMP::OpenMP_CXX
 )

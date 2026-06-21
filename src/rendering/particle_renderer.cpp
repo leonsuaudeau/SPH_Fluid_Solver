@@ -52,13 +52,17 @@ void ParticleRenderer::render(const FluidSolver &solver, const AppState &state, 
 
     // TODO: !!very important, separate coloring logic this is just a hack
     if (state.draw_neighbors && state.selected_particle_index >= 0) {
-        for (const auto& i: solver.neighbor_indices[state.selected_particle_index]) {
+
+        const int start = state.selected_particle_index * MAX_NEIGHBORS;
+        for (int curr = 0; curr < solver.neighbors.counts[state.selected_particle_index]; curr++) {
+            const int j = solver.neighbors.neighbors[start + curr];
+
             glm::vec3 color{0, 0, 0};
-            if (i == state.selected_particle_index) {
+            if (j == state.selected_particle_index) {
                 color = glm::vec3{1,1,1};
             }
             glUniformMatrix4fv(transform_loc, 1, GL_FALSE, &cameraTransform[0][0]);
-            glUniform2f(center_loc, solver.particles.p_x[i], solver.particles.p_y[i]);
+            glUniform2f(center_loc, solver.particles.p_x[j], solver.particles.p_y[j]);
             glUniform1f(radius_loc, radius);
             glUniform3f(color_loc, color.r, color.g, color.b);
             glDrawArrays(GL_TRIANGLE_FAN, 0, 4);

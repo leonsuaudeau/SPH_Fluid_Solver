@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 26)
 find_package(glm CONFIG REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
+find_package(OpenMP REQUIRED COMPONENTS CXX)
 
 add_library(glad external/glad/src/glad.c
         src/sph/solver.cpp

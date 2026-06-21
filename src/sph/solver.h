@@ -22,12 +22,13 @@ public:
     void clean_particles();
     [[nodiscard]] int get_num_particles() const {return particles.count;}
     [[nodiscard]] float get_particle_density(int i) const {return particles.rho[i];}
-    std::vector<int> get_neighbors(int i);
+    std::vector<int> get_neighbors(int i) const;
     [[nodiscard]] float get_cfl_lambda() const;
     [[nodiscard]] float get_particle_mass() const;
 
     Particles particles;
-    std::vector<std::vector<int>> neighbor_indices{};
+    NeighborList neighbors;
+
     float dt;
     float h;
     float rho_0;

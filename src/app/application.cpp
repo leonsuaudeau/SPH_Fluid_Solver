@@ -16,6 +16,11 @@
 
 #include <implot.h>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+
 constexpr ImGuiWindowFlags global_flags = ImGuiWindowFlags_AlwaysAutoResize;
 
 static void glfw_error_callback(int error, const char* description) {
@@ -34,6 +39,28 @@ static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) 
     }
 }
 
+void print_openmp_info() {
+    #ifdef _OPENMP
+    std::cout << "OpenMP enabled\n";
+    std::cout << "_OPENMP version: " << _OPENMP << "\n";
+    std::cout << "Max threads: " << omp_get_max_threads() << "\n";
+
+    omp_set_dynamic(0);
+    omp_set_num_threads(6);
+
+    #pragma omp parallel
+    {
+    #pragma omp single
+        {
+            std::cout << "Actual threads in parallel region: "
+                      << omp_get_num_threads() << "\n";
+        }
+    }
+    #else
+    std::cout << "OpenMP NOT enabled at compile time\n";
+    #endif
+    }
+
 Application::Application() :
     camera(glm::vec2(0, 0), 80, 0.1f),
     solver(0.001f, 0.9f, 1.1f, 20000, 0.5f, glm::vec2(0, -9.81f)),
@@ -47,6 +74,8 @@ Application::Application() :
     stat_seq.density_error[0] = 0;
     stat_seq.density_error_no_surface[0] = 0;
     stat_seq.time[0] = 0;
+
+    print_openmp_info();
 }
 
 int Application::run() {
@@ -160,7 +189,6 @@ int Application::run() {
 
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
-
         camera.updateTransform(display_w, display_h);
         particle_renderer.render(solver, state, camera, display_w, display_h);
         if (state.app_mode == edit_scene) {

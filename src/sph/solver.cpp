@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <iostream>
+#include <omp.h>
 #include <glm/ext/matrix_transform.hpp>
 #include "sph_integrators.h"
 #include "sph_kernel.h"
@@ -45,7 +46,11 @@ float FluidSolver::density_explicit(const int i, const sph::kernels::kernel_cons
     float sum = particles.m[i] * 4.0f * kernel_const.alpha; // density also needs to include the particle itself
     const float p_x_i = particles.p_x[i];
     const float p_y_i = particles.p_y[i];
-    for (const auto j: neighbor_indices[i]) {
+
+    const int start = i * MAX_NEIGHBORS;
+    for (int curr = 0; curr < neighbors.counts[i]; curr++) {
+        const int j = neighbors.neighbors[start + curr];
+
         const float d_p_x = p_x_i - particles.p_x[j];
         const float d_p_y = p_y_i - particles.p_y[j];
         const float dot_p_p = d_p_x*d_p_x + d_p_y*d_p_y;
@@ -72,7 +77,10 @@ glm::vec2 FluidSolver::combined_acceleration(const int i, const sph::kernels::ke
     const float i_frac = p_over_rho2[i];
     const float eps = 0.01f * h * h;
 
-    for (const auto j : neighbor_indices[i]) {
+    const int start = i * MAX_NEIGHBORS;
+    for (int curr = 0; curr < neighbors.counts[i]; curr++) {
+        const int j = neighbors.neighbors[start + curr];
+
         const float d_p_x = p_x_i - particles.p_x[j];
         const float d_p_y = p_y_i - particles.p_y[j];
         const float d_v_x = v_x_i - particles.v_x[j];
@@ -98,7 +106,7 @@ glm::vec2 FluidSolver::combined_acceleration(const int i, const sph::kernels::ke
 glm::vec2 FluidSolver::gravity_acceleration(const int i) const {
     return g / particles.m[i];
 }
-
+/*
 void FluidSolver::update_neighbors() {
     const float radius2 = 4.0f * h * h + 0.0001f;
     neighbor_indices.clear();
@@ -133,104 +141,129 @@ void FluidSolver::update_neighbors_parallel() {
         neighbor_indices[i] = std::move(local);
     });
 }
+*/
 
 void FluidSolver::step(Grid &grid) {
-    auto t0 = std::chrono::system_clock::now();
-
-    float max_v2 = 0.0f;
-
+    //auto t0 = std::chrono::system_clock::now();
+    int total_neighbor_overflow_count = 0;
     grid.populate_cells();
 
-    auto t1 = std::chrono::system_clock::now();
-
-    grid.calculate_neighbors(h, neighbor_indices);
-
-    auto t2 = std::chrono::system_clock::now();
-
-    //update_neighbors();
-    //update_neighbors_parallel();
+    //auto t1 = std::chrono::system_clock::now();
 
     // Precomputed temporary values
     auto p_over_rho2 = std::vector<float>(particles.count);
     auto m_over_rho = std::vector<float>(particles.count);
     sph::kernels::kernel_constants kernel_const(h);
 
-    for (int i = 0; i < particles.count; i++) {
-        const float rho_i = density_explicit(i, kernel_const);
-        particles.rho[i] = rho_i;
-        const float p_i = pressure(i);
-        particles.p[i] = p_i;
+    #pragma omp parallel
+    {
+        //grid.calculate_neighbors(h, neighbors);
 
-        p_over_rho2[i] = p_i / (rho_i * rho_i);
-        m_over_rho[i] = particles.m[i] / rho_i;
+        #pragma omp for schedule(static) reduction(+:total_neighbor_overflow_count)
+        for (int i = 0; i < particles.count; i++) {
+            grid.calculate_neighbors(i, h, neighbors, total_neighbor_overflow_count);
+        }
+
+        //auto t2 = std::chrono::system_clock::now();
+
+        #pragma omp for schedule(static)
+        for (int i = 0; i < particles.count; i++) {
+            const float rho_i = density_explicit(i, kernel_const);
+            particles.rho[i] = rho_i;
+            const float p_i = pressure(i);
+            particles.p[i] = p_i;
+
+            p_over_rho2[i] = p_i / (rho_i * rho_i);
+            m_over_rho[i] = particles.m[i] / rho_i;
+        }
+
+        //auto t3 = std::chrono::system_clock::now();
+
+
+        #pragma omp for schedule(static)
+        for (int i = 0; i < particles.count; i++) {
+            glm::vec2 acc = {0,0};
+            acc += gravity_acceleration(i);
+            acc += combined_acceleration(i, kernel_const, p_over_rho2, m_over_rho);
+
+            particles.a_x[i] = acc.x;
+            particles.a_y[i] = acc.y;
+        }
+
+        //auto t4 = std::chrono::system_clock::now();
+
+        #pragma omp for schedule(static)
+        for (int i = 0; i < particles.count; i++) {
+            if (particles.is_bound[i]) continue;
+
+            const glm::vec2 vel = sph::integrators::euler_cromer_vel_step({particles.v_x[i], particles.v_y[i]}, {particles.a_x[i], particles.a_y[i]}, dt);
+
+            particles.v_x[i] = vel.x;
+            particles.v_y[i] = vel.y;
+
+            const glm::vec2 pos = sph::integrators::euler_cromer_pos_step({particles.p_x[i], particles.p_y[i]}, {particles.v_x[i], particles.v_y[i]}, dt);
+
+            particles.p_x[i] = pos.x;
+            particles.p_y[i] = pos.y;
+        }
+    }
+    if (total_neighbor_overflow_count > 0) {
+        std::cout << "Neighbor overflow count: " << total_neighbor_overflow_count << std::endl;
     }
 
-    auto t3 = std::chrono::system_clock::now();
-
-    for (int i = 0; i < particles.count; i++) {
-        glm::vec2 acc = {0,0};
-        acc += gravity_acceleration(i);
-        acc += combined_acceleration(i, kernel_const, p_over_rho2, m_over_rho);
-
-        particles.a_x[i] = acc.x;
-        particles.a_y[i] = acc.y;
-    }
-
-    auto t4 = std::chrono::system_clock::now();
-
-    for (int i = 0; i < particles.count; i++) {
-        if (particles.is_bound[i]) continue;
-
-        const glm::vec2 vel = sph::integrators::euler_cromer_vel_step({particles.v_x[i], particles.v_y[i]}, {particles.a_x[i], particles.a_y[i]}, dt);
-
-        particles.v_x[i] = vel.x;
-        particles.v_y[i] = vel.y;
-
-        if (const float v2 = vel.x*vel.x + vel.y*vel.y; v2 > max_v2) max_v2 = v2; // update for cfl
-
-        const glm::vec2 pos = sph::integrators::euler_cromer_pos_step({particles.p_x[i], particles.p_y[i]}, {particles.v_x[i], particles.v_y[i]}, dt);
-
-        particles.p_x[i] = pos.x;
-        particles.p_y[i] = pos.y;
-    }
-
-    auto t5 = std::chrono::system_clock::now();
-
-    max_v = std::sqrt(max_v2);
+    //auto t5 = std::chrono::system_clock::now();
 
     // Doing the removal process here to avoid data races in multithreading
     std::vector<int> temp_remove_indices;
 
+    float max_v2 = 0.0f;
     for (int i = 0; i < particles.count; i++) {
         if (grid.get_cell_index(particles.p_x[i], particles.p_y[i]) == -1) {
             temp_remove_indices.push_back(i);
         }
+        const float v_x = particles.v_x[i];
+        const float v_y = particles.v_y[i];
+        const float v2 = v_x*v_x + v_y*v_y;
+        if (v2 > max_v2) max_v2 = v2;
     }
+    max_v = std::sqrt(max_v2);
 
     for (const int i : temp_remove_indices) {
         particles.remove(i);
     }
 
-    auto t6 = std::chrono::system_clock::now();
+    //auto t6 = std::chrono::system_clock::now();
 
 
+
+    /*
     std::cout << "Reset Grid: " << std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count() / 1000.0f <<
         "ms; Neighbor Search: " << std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count() / 1000.0f <<
             "ms; Density&Pressure: " << std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count() / 1000.0f <<
                 "ms; Accelerations: " << std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count() / 1000.0f <<
                     "ms; Integration: " << std::chrono::duration_cast<std::chrono::microseconds>(t5 - t4).count() / 1000.0f <<
                         "ms; Removal: " << std::chrono::duration_cast<std::chrono::microseconds>(t6 - t5).count() / 1000.0f << "ms" << "\n";
+                        */
 
 
 }
 
 void FluidSolver::clean_particles() {
     particles.clear();
-    neighbor_indices.clear();
+    neighbors.clear();
 }
 
-std::vector<int> FluidSolver::get_neighbors(const int i) {
-    return neighbor_indices[i];
+std::vector<int> FluidSolver::get_neighbors(const int i) const {
+    std::vector<int> neighbors_i;
+
+    const int start = i * MAX_NEIGHBORS;
+    for (int curr = 0; curr < neighbors.counts[i]; curr++) {
+        const int j = neighbors.neighbors[start + curr];
+
+        neighbors_i.push_back(j);
+    }
+
+    return neighbors_i;
 }
 
 float FluidSolver::get_cfl_lambda() const {
