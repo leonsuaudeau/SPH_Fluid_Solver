@@ -30,11 +30,17 @@ void SceneIO::load_from_json(FluidSolver &solver, const std::string &name, const
     bin_in.seekg(0, std::ios::beg);
 
     size_t count = size / sizeof(Particle2D);
-    solver.particles = std::vector<Particle2D>(count);
+
+    auto temp_particles = std::vector<Particle2D>(count);
     bin_in.read(
-        reinterpret_cast<char*>(solver.particles.data()),
+        reinterpret_cast<char*>(temp_particles.data()),
         size
     );
+
+    solver.particles.clear();
+    for (auto &p : temp_particles) {
+        solver.particles.add(p.pos, p.vel, p.acc, p.mass, p.density, p.is_fixed, p.color);
+    }
 }
 
 void SceneIO::save_to_json(FluidSolver &solver, const std::string &name, const std::string &root ) {
@@ -57,8 +63,21 @@ void SceneIO::save_to_json(FluidSolver &solver, const std::string &name, const s
     }
 
     json_out << json.dump(4);
+
+    auto temp_particles = std::vector<Particle2D>(solver.particles.count);
+    for (int i = 0; i < solver.particles.count; i++) {
+        temp_particles[i] = Particle2D(
+            {solver.particles.p_x[i], solver.particles.p_y[i]},
+            {solver.particles.v_x[i], solver.particles.v_y[i]},
+            {solver.particles.a_x[i], solver.particles.a_y[i]},
+            solver.particles.m[i], solver.particles.p[i], solver.particles.rho[i],
+            {solver.particles.col_r[i], solver.particles.col_g[i], solver.particles.col_b[i]},
+            solver.particles.is_bound[i]);
+    }
+
+
     bin_out.write(
-        reinterpret_cast<const char*>(solver.particles.data()),
+        reinterpret_cast<const char*>(temp_particles.data()),
         solver.get_num_particles() * sizeof(Particle2D));
 }
 

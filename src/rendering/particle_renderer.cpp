@@ -33,16 +33,18 @@ void ParticleRenderer::render(const FluidSolver &solver, const AppState &state, 
     glBindVertexArray(vao);
     float radius = solver.h / 2.0f;
 
-    for (const auto& p : solver.particles) {
+    for (int i = 0; i < solver.particles.count; i++) {
         glUniformMatrix4fv(transform_loc, 1, GL_FALSE, &cameraTransform[0][0]);
-        glUniform2f(center_loc, p.pos.x, p.pos.y);
+        glUniform2f(center_loc, solver.particles.p_x[i], solver.particles.p_y[i]);
         glUniform1f(radius_loc, radius);
         // debug pressure coloring TODO: this should be done in the shader, not here
         glm::vec3 red{1,0,0};
         glm::vec3 blue{0,0,1};
-        const float v = glm::length(p.vel);
+        const float v = glm::length(glm::vec2(solver.particles.v_x[i], solver.particles.v_y[i]));
         //glm::vec3 color = p.color;
-        const glm::vec3 color = p.is_fixed? p.color : glm::mix(blue, red, log(v + 1e-4) / 5);
+        const glm::vec3 color = solver.particles.is_bound[i]?
+            glm::vec3(solver.particles.col_r[i], solver.particles.col_g[i], solver.particles.col_b[i])
+            : glm::mix(blue, red, log(v + 1e-4) / 5);
         glUniform3f(color_loc, color.r,color.g,color.b);
 
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
@@ -55,9 +57,8 @@ void ParticleRenderer::render(const FluidSolver &solver, const AppState &state, 
             if (i == state.selected_particle_index) {
                 color = glm::vec3{1,1,1};
             }
-            const Particle2D &p = solver.particles[i];
             glUniformMatrix4fv(transform_loc, 1, GL_FALSE, &cameraTransform[0][0]);
-            glUniform2f(center_loc, p.pos.x, p.pos.y);
+            glUniform2f(center_loc, solver.particles.p_x[i], solver.particles.p_y[i]);
             glUniform1f(radius_loc, radius);
             glUniform3f(color_loc, color.r, color.g, color.b);
             glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
@@ -67,15 +68,15 @@ void ParticleRenderer::render(const FluidSolver &solver, const AppState &state, 
     glBindVertexArray(0);
 }
 
-void ParticleRenderer::render(const std::vector<Particle2D> &particles, const float radius, const Camera2D &camera, int width, int height) const {
+void ParticleRenderer::render(const Particles &particles, const float radius, const Camera2D &camera, int width, int height) const {
     glm::mat4 cameraTransform = camera.getProjectionMatrix() * camera.getViewMatrix() * glm::mat4(1.0f);
 
     glBindVertexArray(vao);
-    for (const auto& p : particles) {
+    for (int i = 0; i < particles.count; i++) {
         glUniformMatrix4fv(transform_loc, 1, GL_FALSE, &cameraTransform[0][0]);
-        glUniform2f(center_loc, p.pos.x, p.pos.y);
+        glUniform2f(center_loc, particles.p_x[i], particles.p_y[i]);
         glUniform1f(radius_loc, radius);
-        const glm::vec3 color = p.color;
+        const glm::vec3 color = glm::vec3(particles.col_r[i], particles.col_g[i], particles.col_b[i]);
 
         glUniform3f(color_loc, color.r,color.g,color.b);
 

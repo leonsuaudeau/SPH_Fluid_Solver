@@ -37,14 +37,13 @@ static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) 
 Application::Application() :
     camera(glm::vec2(0, 0), 80, 0.1f),
     solver(0.001f, 0.9f, 1.1f, 20000, 0.5f, glm::vec2(0, -9.81f)),
-    grid(512, 512, {-256, -256}, solver){
+    grid(512, 512, {-256, -256}, solver.h, solver.particles){
 
     // Load files in scene path once
     scenes = SceneIO::get_scene_entries("scenes/");
     snapshots = SceneIO::get_scene_entries("snapshots/");
     std::filesystem::create_directories("../../output");
 
-    preview_particles = {};
     stat_seq.density_error[0] = 0;
     stat_seq.density_error_no_surface[0] = 0;
     stat_seq.time[0] = 0;
@@ -110,9 +109,9 @@ int Application::run() {
             if (state.spigot_enabled && state.spigot_cooldown > 0.05f) {
                 state.spigot_cooldown = 0;
                 solver.add_particle_grid({3,1}, {-48,60}, {1,0,0});
-                solver.particles[solver.particles.size() - 1].vel = glm::vec2(0, -20);
-                solver.particles[solver.particles.size() - 2].vel = glm::vec2(0, -20);
-                solver.particles[solver.particles.size() - 3].vel = glm::vec2(0, -20);
+                solver.particles.v_y[solver.particles.count - 1] = -20;
+                solver.particles.v_y[solver.particles.count - 2] = -20;
+                solver.particles.v_y[solver.particles.count - 3] = -20;
             }
         }
 
@@ -188,12 +187,19 @@ void Application::ui_simulate() {
     // handle particle selection
     if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::GetIO().WantCaptureMouse) {
         const glm::vec2 mouse_pos = camera.get_cursor_world_pos(window);
-        const glm::ivec2 index = grid.get_cell_index(mouse_pos);
         float min_dist = 100;
         for (int offset_x = -1; offset_x < 2; offset_x++) {
             for (int offset_y = -1; offset_y < 2; offset_y++) {
-                for (const auto& i: grid.cells[index.x + offset_x][index.y + offset_y].p_indices) {
-                    const float dist = glm::length(mouse_pos - solver.particles[i].pos);
+                const float p_x_o = mouse_pos.x + offset_x * grid.cell_size;
+                const float p_y_o = mouse_pos.y + offset_y * grid.cell_size;
+
+                const int cell = grid.get_cell_index(p_x_o, p_y_o);
+
+                if (cell == -1) continue;
+
+                for (int k = 0; k < grid.counts[cell]; k++) {
+                    int i = grid.particle_indices[cell * MAX_PARTICLES_PER_CELL + k];
+                    const float dist = glm::length(mouse_pos - glm::vec2(grid.particles.p_x[i], grid.particles.p_y[i]));
                     if (dist < min_dist) {
                         min_dist = dist;
                         state.selected_particle_index = i;
@@ -278,13 +284,14 @@ void Application::ui_simulate() {
             float rho_avg = 0;
             float rho_avg_no_surface = 0;
 
-            for (const auto &p: solver.particles) {
-                if (p.is_fixed) continue;
-                rho_avg += p.density - solver.rho_0;
+            for (int i = 0; i < solver.get_num_particles(); i++) {
+                if (solver.particles.is_bound[i]) continue;
+                rho_avg += solver.particles.rho[i] - solver.rho_0;
 
-                if (p.density < solver.rho_0) continue;
-                rho_avg_no_surface += p.density - solver.rho_0;
+                if (solver.particles.rho[i] < solver.rho_0) continue;
+                rho_avg_no_surface += solver.particles.rho[i] - solver.rho_0;
             }
+
             rho_avg /= static_cast<float>(solver.get_num_particles());
             rho_avg_no_surface /= static_cast<float>(solver.get_num_particles());
 
@@ -423,12 +430,12 @@ void Application::ui_scene_editor() {
                 for (int y = 0; y < state.rect_n[1]; y++) {
                     const glm::vec4 r_pos = glm::vec4(x - x_offset, y - y_offset, 0.0f, 0.0f) * R;
                     const glm::vec2 pos = state.placement_origin + glm::vec2(r_pos.x, r_pos.y) * solver.h;
-                    preview_particles.emplace_back(Particle2D(pos, glm::vec2(0), glm::vec2(0), m_i, 0, solver.rho_0, color, state.place_boundary));
+                    preview_particles.add(pos, {0,0}, {0,0}, m_i, solver.rho_0, state.place_boundary, color);
                 }
             }
         }else {
             const glm::vec2 pos = state.placement_origin + glm::vec2(state.rect_n[0], state.rect_n[1]) * solver.h;
-            preview_particles.emplace_back(Particle2D(pos, glm::vec2(0), glm::vec2(0), m_i, 0, solver.rho_0, color, state.place_boundary));
+            preview_particles.add(pos, {0,0}, {0,0}, m_i, solver.rho_0, state.place_boundary, color);
         }
     }else {
         preview_particles.clear();

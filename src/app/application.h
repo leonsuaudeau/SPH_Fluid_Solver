@@ -23,14 +23,14 @@ private:
     GLFWwindow*window = nullptr;
     Camera2D camera;
     FluidSolver solver;
-    DataStructure::Grid grid;
+    Grid grid;
     AppState state;
     ParticleRenderer particle_renderer;
     ScreenRecorder screen_recorder;
     ImGuiLayer ui_handler;
     std::vector<std::string> scenes;
     std::vector<std::string> snapshots;
-    std::vector<Particle2D> preview_particles;
+    Particles preview_particles;
     stats::Sequence stat_seq{};
 };
 
