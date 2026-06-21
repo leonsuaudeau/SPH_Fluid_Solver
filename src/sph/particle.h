@@ -43,7 +43,7 @@ struct Particles {
     std::vector<float> col_g;
     std::vector<float> col_b;
 
-    std::vector<bool> is_bound;
+    std::vector<u_int8_t> is_bound;
 };
 
 inline Particles::Particles(const int max_particles) {
@@ -112,19 +112,6 @@ inline void Particles::remove(int i) {
 }
 
 inline void Particles::clear() {
-    p_x.clear();
-    p_y.clear();
-    v_x.clear();
-    v_y.clear();
-    a_x.clear();
-    a_y.clear();
-    m.clear();
-    p.clear();
-    rho.clear();
-    col_r.clear();
-    col_g.clear();
-    col_b.clear();
-    is_bound.clear();
     count = 0;
 }
 

@@ -41,10 +41,15 @@ float FluidSolver::get_particle_mass() const {
     return h * h * rho_0;
 }
 
-float FluidSolver::density_explicit(const int i) const {
-    float sum = 0;
+float FluidSolver::density_explicit(const int i, const sph::kernels::kernel_constants kernel_const) const {
+    float sum = particles.m[i] * 4.0f * kernel_const.alpha; // density also needs to include the particle itself
+    const float p_x_i = particles.p_x[i];
+    const float p_y_i = particles.p_y[i];
     for (const auto j: neighbor_indices[i]) {
-        sum += particles.m[j] * sph::kernels::cubic_spline_2D(particles.p_x[i], particles.p_y[i], particles.p_x[j], particles.p_y[j], h);
+        const float d_p_x = p_x_i - particles.p_x[j];
+        const float d_p_y = p_y_i - particles.p_y[j];
+        const float dot_p_p = d_p_x*d_p_x + d_p_y*d_p_y;
+        sum += particles.m[j] * sph::kernels::cubic_spline_2D(dot_p_p, kernel_const);
     }
     return sum;
 }
@@ -53,37 +58,8 @@ float FluidSolver::pressure(const int i) const {
     return  glm::max(k * (particles.rho[i] / rho_0 - 1), 0.0f);
 }
 
-glm::vec2 FluidSolver::pressure_acceleration(const int i) const {
-    auto sum = glm::vec2(0);
-    const float rho_i = particles.rho[i];
-    const float i_frac = particles.p[i] / (rho_i * rho_i);
-    for (const auto j : neighbor_indices[i]) {
-        const float rho_j = particles.rho[j];
-        sum += particles.m[j] * (i_frac + particles.p[j] / (rho_j * rho_j)) *
-            sph::kernels::cubic_spline_2D_deriv(particles.p_x[i], particles.p_y[i], particles.p_x[j], particles.p_y[j], h);
-    }
-    return -sum;
-}
-
-glm::vec2 FluidSolver::viscosity_acceleration(const int i) const {
-    float vis_x = 0;
-    float vis_y = 0;
-    const float v_x_i = particles.v_x[i];
-    const float v_y_i = particles.v_y[i];
-    for (const auto j : neighbor_indices[i]) {
-        const float d_x = particles.p_x[i] - particles.p_x[j];
-        const float d_y = particles.p_y[i] - particles.p_y[j];
-
-        const float m_div_rho = particles.m[j] / particles.rho[j];
-        const glm::vec2 kernel_deriv = sph::kernels::cubic_spline_2D_deriv(particles.p_x[i], particles.p_y[i], particles.p_x[j], particles.p_y[j], h);
-
-        vis_x += m_div_rho * ((particles.v_x[j] - v_x_i) * d_x) / (d_x * d_x + 0.01f * h * h) * kernel_deriv.x;
-        vis_y += m_div_rho * ((particles.v_y[j] - v_y_i) * d_y) / (d_y * d_y + 0.01f * h * h) * kernel_deriv.y;
-    }
-    return 2 * nu * glm::vec2(vis_x, vis_y);
-}
-
-glm::vec2 FluidSolver::combined_acceleration(const int i) const {
+glm::vec2 FluidSolver::combined_acceleration(const int i, const sph::kernels::kernel_constants kernel_const,
+    const std::vector<float> &p_over_rho2, const std::vector<float> &m_over_rho) const {
     float p_sum_x = 0;
     float p_sum_y = 0;
     float v_sum_x = 0;
@@ -93,27 +69,22 @@ glm::vec2 FluidSolver::combined_acceleration(const int i) const {
     const float p_y_i = particles.p_y[i];
     const float v_x_i = particles.v_x[i];
     const float v_y_i = particles.v_y[i];
-    const float rho_i = particles.rho[i];
-    const float inv_density_i = 1.0f / rho_i;
-    const float i_frac = particles.p[i] * inv_density_i * inv_density_i;
+    const float i_frac = p_over_rho2[i];
     const float eps = 0.01f * h * h;
 
     for (const auto j : neighbor_indices[i]) {
-        const glm::vec2 kernel_deriv = sph::kernels::cubic_spline_2D_deriv(p_x_i, p_y_i, particles.p_x[j], particles.p_y[j], h);
-
         const float d_p_x = p_x_i - particles.p_x[j];
         const float d_p_y = p_y_i - particles.p_y[j];
         const float d_v_x = v_x_i - particles.v_x[j];
         const float d_v_y = v_y_i - particles.v_y[j];
-
         const float dot_v_p = d_v_x*d_p_x + d_v_y*d_p_y;
         const float dot_p_p = d_p_x*d_p_x + d_p_y*d_p_y;
 
+        const glm::vec2 kernel_deriv = sph::kernels::cubic_spline_2D_deriv(d_p_x, d_p_y, dot_p_p, kernel_const);
+
         const float m_j = particles.m[j];
-        const float p_j = particles.p[j];
-        const float rho_j = particles.rho[j];
-        const float p_sum_no_deriv = m_j * (i_frac + p_j / (rho_j * rho_j));
-        const float v_sum_no_deriv = m_j / rho_j * dot_v_p / (dot_p_p + eps);
+        const float p_sum_no_deriv = m_j * (i_frac + p_over_rho2[j]);
+        const float v_sum_no_deriv = m_over_rho[j] * dot_v_p / (dot_p_p + eps);
 
         p_sum_x += p_sum_no_deriv * kernel_deriv.x;
         p_sum_y += p_sum_no_deriv * kernel_deriv.y;
@@ -179,9 +150,19 @@ void FluidSolver::step(Grid &grid) {
     //update_neighbors();
     //update_neighbors_parallel();
 
+    // Precomputed temporary values
+    auto p_over_rho2 = std::vector<float>(particles.count);
+    auto m_over_rho = std::vector<float>(particles.count);
+    sph::kernels::kernel_constants kernel_const(h);
+
     for (int i = 0; i < particles.count; i++) {
-        particles.rho[i] = density_explicit(i);
-        particles.p[i] = pressure(i);
+        const float rho_i = density_explicit(i, kernel_const);
+        particles.rho[i] = rho_i;
+        const float p_i = pressure(i);
+        particles.p[i] = p_i;
+
+        p_over_rho2[i] = p_i / (rho_i * rho_i);
+        m_over_rho[i] = particles.m[i] / rho_i;
     }
 
     auto t3 = std::chrono::system_clock::now();
@@ -189,7 +170,7 @@ void FluidSolver::step(Grid &grid) {
     for (int i = 0; i < particles.count; i++) {
         glm::vec2 acc = {0,0};
         acc += gravity_acceleration(i);
-        acc += combined_acceleration(i);
+        acc += combined_acceleration(i, kernel_const, p_over_rho2, m_over_rho);
 
         particles.a_x[i] = acc.x;
         particles.a_y[i] = acc.y;
@@ -238,7 +219,7 @@ void FluidSolver::step(Grid &grid) {
             "ms; Density&Pressure: " << std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count() / 1000.0f <<
                 "ms; Accelerations: " << std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count() / 1000.0f <<
                     "ms; Integration: " << std::chrono::duration_cast<std::chrono::microseconds>(t5 - t4).count() / 1000.0f <<
-                        "ms; Removal: " << std::chrono::duration_cast<std::chrono::microseconds>(t6 - t5).count() / 1000.0f << "ms" << std::endl;
+                        "ms; Removal: " << std::chrono::duration_cast<std::chrono::microseconds>(t6 - t5).count() / 1000.0f << "ms" << "\n";
 
 
 }

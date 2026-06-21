@@ -4,6 +4,10 @@
 #include "data_structure.h"
 #include "particle.h"
 
+namespace sph::kernels {
+    struct kernel_constants;
+}
+
 namespace stats {
     struct Snapshot;
 }
@@ -33,11 +37,9 @@ public:
     glm::vec2 g{};
 
 private:
-    [[nodiscard]] float density_explicit(int i) const;
+    [[nodiscard]] float density_explicit(int i, sph::kernels::kernel_constants kernel_const) const;
     [[nodiscard]] float pressure(int i) const;
-    [[nodiscard]] glm::vec2 pressure_acceleration(int i) const;
-    [[nodiscard]] glm::vec2 viscosity_acceleration(int i) const;
-    [[nodiscard]] glm::vec2 combined_acceleration(int i) const;
+    [[nodiscard]] glm::vec2 combined_acceleration(int i, sph::kernels::kernel_constants kernel_const, const std::vector<float> &p_over_rho2, const std::vector<float> &m_over_rho) const;
     [[nodiscard]] glm::vec2 gravity_acceleration(int i) const;
     void update_neighbors();
     void update_neighbors_parallel();

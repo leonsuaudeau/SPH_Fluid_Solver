@@ -16,6 +16,7 @@ struct Grid {
 
     int width, height;
     float cell_size;
+    float inv_cell_size;
     glm::vec2 origin{};
     std::vector<int> counts;
     std::vector<int> particle_indices;
