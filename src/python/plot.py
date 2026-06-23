@@ -39,11 +39,29 @@ def read_from_file():
     time = stats[midpoint:]
     return time, density_error
 
+def read_from_file_manual(filename):
+    stats = np.fromfile(STATISTICS_DIR / filename, dtype=np.float32)
+    midpoint = len(stats) // 2
+    return stats[midpoint:] , stats[:midpoint]
+
 def main():
-    X, Y = read_from_file()
+    #X, Y = read_from_file()
+    X1, Y1 = read_from_file_manual("tub10k.bin")
+    X2, Y2 = read_from_file_manual("tub20k.bin")
+    X3, Y3 = read_from_file_manual("tub40k.bin")
+    X4, Y4 = read_from_file_manual("tub80k.bin")
+    X5, Y5 = read_from_file_manual("tub160k.bin")
+    X6, Y6 = read_from_file_manual("tub320k.bin")
 
     _fig, ax = plt.subplots(figsize=(8,5))
-    ax.plot(X, Y, label="values")
+    ax.set_ylim([0, 0.06])
+
+    ax.plot(X1, Y1, label="k=10k")
+    ax.plot(X2, Y2, label="k=20k")
+    ax.plot(X3, Y3, label="k=40k")
+    ax.plot(X4, Y4, label="k=80k")
+    ax.plot(X5, Y5, label="k=160k")
+    ax.plot(X6, Y6, label="k=320k")
 
     ax.set_xlabel("t")
     ax.set_ylabel("density error")
