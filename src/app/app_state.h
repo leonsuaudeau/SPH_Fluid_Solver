@@ -32,6 +32,8 @@ struct AppState {
 
     // editor
     bool placement_tool_active = true;
+    bool grid_edit_mode = false;
+    bool dragging_grid = false;
     float selected_color[4]{1,0,0,1};
     bool place_boundary = false;
     EditorMode editor_mode = rectangle;

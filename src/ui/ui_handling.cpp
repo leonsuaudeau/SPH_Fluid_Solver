@@ -34,6 +34,8 @@ void Ui::set_debug_overlay(const AppState &state, const FluidSolver &solver, con
         ImGui::Text("x: %.2f y: %.2f", cam_pos.x, cam_pos.y);
         if (state.selected_particle_index >= 0) {
             ImGui::Text("Selected particle: %d", state.selected_particle_index);
+            ImGui::Text("Density: %f", solver.particles.rho[state.selected_particle_index]);
+            ImGui::Text("Pressure: %f", solver.particles.p[state.selected_particle_index]);
         }
     }
     ImGui::End();

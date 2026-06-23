@@ -3,8 +3,6 @@
 #include <fstream>
 #include <iostream>
 
-std::string relative_path = "../../savestate/";
-
 void SceneIO::load_from_json(FluidSolver &solver, const std::string &name, const std::string &root ) {
     std::ifstream json_in(relative_path + root + name + ".json");
     nlohmann::json json;

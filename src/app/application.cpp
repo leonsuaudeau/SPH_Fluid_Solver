@@ -99,6 +99,7 @@ int Application::run() {
     glfwSetWindowUserPointer(window, &user_pointer);
 
     if (!particle_renderer.init()) return 1;
+    if (!grid_renderer.init()) return 1;
     ImGuiLayer::init(window, main_scale);
 
     double current_time = glfwGetTime();
@@ -190,9 +191,18 @@ int Application::run() {
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
         camera.updateTransform(display_w, display_h);
-        particle_renderer.render(solver, state, camera, display_w, display_h);
+
+
+        // Rendering
+        glViewport(0, 0, display_w, display_h);
+        glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        grid_renderer.render(grid, camera);
+        particle_renderer.render(solver, state, camera);
+
         if (state.app_mode == edit_scene) {
-            particle_renderer.render(preview_particles, solver.h / 2.0f, camera, display_w, display_h);
+            particle_renderer.render(preview_particles, solver.h / 2.0f, camera);
         }
         screen_recorder.update(solver.dt, state.recording, display_w, display_h);
 
@@ -366,6 +376,21 @@ void Application::ui_simulate() {
             state.stat_seq_index = 0;
             state.stat_seq_time = 0;
         }
+
+        // Storing statistics
+        if (ImGui::Button("Save statistics")) {
+            state.currently_typing = true;
+        }
+        if (state.currently_typing) {
+            if (ImGui::InputText("Name", state.input_buffer0, 24, ImGuiInputTextFlags_EnterReturnsTrue)) {
+                const std::string name = state.input_buffer0;
+                // TODO: add option for having different values for both axes
+                stats::save_to_file(name, stat_seq.density_error_no_surface, stat_seq.time, state.stat_seq_index);
+                state.currently_typing = false;
+            }
+        }
+
+
         ImGui::End();
     }
 }
@@ -407,7 +432,31 @@ void Application::ui_scene_editor() {
     if (ImGui::Button("Placement tool")) {
         state.placement_tool_active = !state.placement_tool_active;
     }
+    if (ImGui::Button("Draw grid")) {
+        state.grid_edit_mode = !state.grid_edit_mode;
+    }
     ImGui::End();
+
+    if (state.grid_edit_mode) {
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::GetIO().WantCaptureMouse) {
+            if (!state.dragging_grid) {
+                grid.origin = camera.get_cursor_world_pos(window);
+                state.dragging_grid = true;
+            }else {
+                state.dragging_grid = false;
+                state.grid_edit_mode = false;
+            }
+        }else {
+            if (state.dragging_grid) {
+                const glm::vec2 mouse_pos = camera.get_cursor_world_pos(window);
+                const glm::vec2 local_pos = mouse_pos - grid.origin;
+                const int width = static_cast<int>(std::floor(local_pos.x / grid.cell_size));
+                const int height = static_cast<int>(std::floor(local_pos.y / grid.cell_size));
+                grid.width = width;
+                grid.height = height;
+            }
+        }
+    }
 
     if (state.placement_tool_active) {
         ImGui::SetNextWindowSizeConstraints( ImVec2(200, 100), ImVec2(200, FLT_MAX));

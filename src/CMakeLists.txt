@@ -19,6 +19,7 @@ add_executable(SPH_Fluid_Solver
         app/scene_io.cpp
         app/statistics.cpp
         rendering/particle_renderer.cpp
+        rendering/grid_renderer.cpp
         rendering/shader_utilities.cpp
         rendering/screen_recorder.cpp
         ui/ui_handling.cpp

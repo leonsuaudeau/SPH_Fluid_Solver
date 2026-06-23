@@ -23,11 +23,8 @@ bool ParticleRenderer::init() {
     return true;
 }
 
-void ParticleRenderer::render(const FluidSolver &solver, const AppState &state, const Camera2D &camera, const int width, const int height) const {
+void ParticleRenderer::render(const FluidSolver &solver, const AppState &state, const Camera2D &camera) const {
     glm::mat4 cameraTransform = camera.getProjectionMatrix() * camera.getViewMatrix() * glm::mat4(1.0f);
-    glViewport(0, 0, width, height);
-    glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
-    glClear(GL_COLOR_BUFFER_BIT);
 
     glUseProgram(shader_program);
     glBindVertexArray(vao);
@@ -72,7 +69,7 @@ void ParticleRenderer::render(const FluidSolver &solver, const AppState &state, 
     glBindVertexArray(0);
 }
 
-void ParticleRenderer::render(const Particles &particles, const float radius, const Camera2D &camera, int width, int height) const {
+void ParticleRenderer::render(const Particles &particles, const float radius, const Camera2D &camera) const {
     glm::mat4 cameraTransform = camera.getProjectionMatrix() * camera.getViewMatrix() * glm::mat4(1.0f);
 
     glBindVertexArray(vao);

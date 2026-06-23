@@ -22,7 +22,7 @@ public:
     void clean_particles();
     [[nodiscard]] int get_num_particles() const {return particles.count;}
     [[nodiscard]] float get_particle_density(int i) const {return particles.rho[i];}
-    std::vector<int> get_neighbors(int i) const;
+    [[nodiscard]] std::vector<int> get_neighbors(int i) const;
     [[nodiscard]] float get_cfl_lambda() const;
     [[nodiscard]] float get_particle_mass() const;
 
@@ -42,8 +42,6 @@ private:
     [[nodiscard]] float pressure(int i) const;
     [[nodiscard]] glm::vec2 combined_acceleration(int i, sph::kernels::kernel_constants kernel_const, const std::vector<float> &p_over_rho2, const std::vector<float> &m_over_rho) const;
     [[nodiscard]] glm::vec2 gravity_acceleration(int i) const;
-    void update_neighbors();
-    void update_neighbors_parallel();
 };
 
 #endif //SPH_FLUID_SOLVER_SOLVER_H

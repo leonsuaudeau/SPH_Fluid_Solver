@@ -1,9 +1,7 @@
 #include "solver.h"
 #include <execution>
-#include <algorithm>
 #include <chrono>
 #include <iostream>
-#include <omp.h>
 #include <glm/ext/matrix_transform.hpp>
 #include "sph_integrators.h"
 #include "sph_kernel.h"
@@ -106,65 +104,22 @@ glm::vec2 FluidSolver::combined_acceleration(const int i, const sph::kernels::ke
 glm::vec2 FluidSolver::gravity_acceleration(const int i) const {
     return g / particles.m[i];
 }
-/*
-void FluidSolver::update_neighbors() {
-    const float radius2 = 4.0f * h * h + 0.0001f;
-    neighbor_indices.clear();
-    for (int i = 0; i < particles.count; i++) {
-        neighbor_indices.emplace_back();
-        for (int j = 0; j < particles.count; j++) {
-            const float d_x = particles.p_x[j] - particles.p_x[i];
-            const float d_y = particles.p_y[j] - particles.p_y[i];
-            if (const float d2 = d_x*d_x + d_y*d_y; d2 < radius2) {
-                neighbor_indices[i].push_back(j);
-            }
-        }
-    }
-}
-
-void FluidSolver::update_neighbors_parallel() {
-    const float radius2 = 4.0f * h * h + 0.0001f;
-    int N = get_num_particles();
-    neighbor_indices = std::vector<std::vector<int>>(N);
-    std::vector<int> indices(N);
-    std::iota(indices.begin(), indices.end(), 0);
-
-    std::for_each(std::execution::par, indices.begin(), indices.end(), [&](int i) {
-        std::vector<int> local;
-        for (int j = 0; j < particles.count; j++) {
-            const float d_x = particles.p_x[j] - particles.p_x[i];
-            const float d_y = particles.p_y[j] - particles.p_y[i];
-            if (const float d2 = d_x*d_x + d_y*d_y; d2 < radius2) {
-                local.push_back(j);
-            }
-        }
-        neighbor_indices[i] = std::move(local);
-    });
-}
-*/
 
 void FluidSolver::step(Grid &grid) {
-    //auto t0 = std::chrono::system_clock::now();
     int total_neighbor_overflow_count = 0;
     grid.populate_cells();
-
-    //auto t1 = std::chrono::system_clock::now();
 
     // Precomputed temporary values
     auto p_over_rho2 = std::vector<float>(particles.count);
     auto m_over_rho = std::vector<float>(particles.count);
-    sph::kernels::kernel_constants kernel_const(h);
+    const sph::kernels::kernel_constants kernel_const(h);
 
     #pragma omp parallel
     {
-        //grid.calculate_neighbors(h, neighbors);
-
         #pragma omp for schedule(static) reduction(+:total_neighbor_overflow_count)
         for (int i = 0; i < particles.count; i++) {
             grid.calculate_neighbors(i, h, neighbors, total_neighbor_overflow_count);
         }
-
-        //auto t2 = std::chrono::system_clock::now();
 
         #pragma omp for schedule(static)
         for (int i = 0; i < particles.count; i++) {
@@ -177,9 +132,6 @@ void FluidSolver::step(Grid &grid) {
             m_over_rho[i] = particles.m[i] / rho_i;
         }
 
-        //auto t3 = std::chrono::system_clock::now();
-
-
         #pragma omp for schedule(static)
         for (int i = 0; i < particles.count; i++) {
             glm::vec2 acc = {0,0};
@@ -189,8 +141,6 @@ void FluidSolver::step(Grid &grid) {
             particles.a_x[i] = acc.x;
             particles.a_y[i] = acc.y;
         }
-
-        //auto t4 = std::chrono::system_clock::now();
 
         #pragma omp for schedule(static)
         for (int i = 0; i < particles.count; i++) {
@@ -211,8 +161,6 @@ void FluidSolver::step(Grid &grid) {
         std::cout << "Neighbor overflow count: " << total_neighbor_overflow_count << std::endl;
     }
 
-    //auto t5 = std::chrono::system_clock::now();
-
     // Doing the removal process here to avoid data races in multithreading
     std::vector<int> temp_remove_indices;
 
@@ -231,21 +179,6 @@ void FluidSolver::step(Grid &grid) {
     for (const int i : temp_remove_indices) {
         particles.remove(i);
     }
-
-    //auto t6 = std::chrono::system_clock::now();
-
-
-
-    /*
-    std::cout << "Reset Grid: " << std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count() / 1000.0f <<
-        "ms; Neighbor Search: " << std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count() / 1000.0f <<
-            "ms; Density&Pressure: " << std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count() / 1000.0f <<
-                "ms; Accelerations: " << std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count() / 1000.0f <<
-                    "ms; Integration: " << std::chrono::duration_cast<std::chrono::microseconds>(t5 - t4).count() / 1000.0f <<
-                        "ms; Removal: " << std::chrono::duration_cast<std::chrono::microseconds>(t6 - t5).count() / 1000.0f << "ms" << "\n";
-                        */
-
-
 }
 
 void FluidSolver::clean_particles() {

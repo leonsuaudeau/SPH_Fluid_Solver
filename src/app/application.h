@@ -4,6 +4,7 @@
 
 #include "app_state.h"
 #include "camera.h"
+#include "grid_renderer.h"
 #include "particle_renderer.h"
 #include "solver.h"
 #include "screen_recorder.h"
@@ -26,6 +27,7 @@ private:
     Grid grid;
     AppState state;
     ParticleRenderer particle_renderer;
+    GridRenderer grid_renderer;
     ScreenRecorder screen_recorder;
     ImGuiLayer ui_handler;
     std::vector<std::string> scenes;
