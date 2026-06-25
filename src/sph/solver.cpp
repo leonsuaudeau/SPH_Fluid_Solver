@@ -58,7 +58,7 @@ float FluidSolver::density_explicit(const int i, const sph::kernels::kernel_cons
 }
 
 float FluidSolver::pressure(const int i) const {
-    return  glm::max(k * (particles.rho[i] / rho_0 - 1), 0.0f);
+    return glm::max(k * (particles.rho[i] / rho_0 - 1), 0.0f);
 }
 
 glm::vec2 FluidSolver::combined_acceleration(const int i, const sph::kernels::kernel_constants kernel_const,
@@ -89,8 +89,12 @@ glm::vec2 FluidSolver::combined_acceleration(const int i, const sph::kernels::ke
         const glm::vec2 kernel_deriv = sph::kernels::cubic_spline_2D_deriv(d_p_x, d_p_y, dot_p_p, kernel_const);
 
         const float m_j = particles.m[j];
-        const float p_sum_no_deriv = m_j * (i_frac + p_over_rho2[j]);
-        const float v_sum_no_deriv = m_over_rho[j] * dot_v_p / (dot_p_p + eps);
+
+        const float j_frac = (particles.is_bound[j])? i_frac : p_over_rho2[j];
+        const float j_m_over_rho = (particles.is_bound[j])? particles.m[j] / particles.rho[i] : m_over_rho[j];
+
+        const float p_sum_no_deriv = m_j * (i_frac + j_frac);
+        const float v_sum_no_deriv = j_m_over_rho * dot_v_p / (dot_p_p + eps);
 
         p_sum_x += p_sum_no_deriv * kernel_deriv.x;
         p_sum_y += p_sum_no_deriv * kernel_deriv.y;
@@ -123,6 +127,7 @@ void FluidSolver::step(Grid &grid) {
 
         #pragma omp for schedule(static)
         for (int i = 0; i < particles.count; i++) {
+            if (particles.is_bound[i]) continue;
             const float rho_i = density_explicit(i, kernel_const);
             particles.rho[i] = rho_i;
             const float p_i = pressure(i);
@@ -134,8 +139,9 @@ void FluidSolver::step(Grid &grid) {
 
         #pragma omp for schedule(static)
         for (int i = 0; i < particles.count; i++) {
+            if (particles.is_bound[i]) continue;
             glm::vec2 acc = {0,0};
-            acc += gravity_acceleration(i);
+            acc += g;
             acc += combined_acceleration(i, kernel_const, p_over_rho2, m_over_rho);
 
             particles.a_x[i] = acc.x;

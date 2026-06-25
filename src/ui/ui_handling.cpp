@@ -65,10 +65,9 @@ void ImGuiLayer::render() {
 }
 
 void ImGuiLayer::shutdown() {
-    /* // TODO: figure out reason for segfault (exit code 139)
+    /// TODO: figure out reason for segfault (exit code 139)
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
-    ImPlot::DestroyContext();
     ImGui::DestroyContext();
-    */
+    ImPlot::DestroyContext();
 }
