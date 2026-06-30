@@ -10,7 +10,6 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(sph_tests
         general_tests.cpp
-        general_tests.cpp
 )
 
 target_link_libraries(sph_tests PRIVATE

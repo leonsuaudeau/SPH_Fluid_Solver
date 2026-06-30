@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 #include <cstdio>
 #include <ctime>
+#include <cmath>
 #include <filesystem>
 #include <glm/vec2.hpp>
 
@@ -286,6 +287,8 @@ void Application::ui_simulate() {
         ImGui::SameLine();
         if (ImGui::Button("load")) {
             SceneIO::load_from_json(solver, entry, "snapshots/");
+            grid.set_cell_size(solver.h);
+            grid.populate_cells();
         }
         ImGui::SameLine();
         if (ImGui::Button("X")) {
@@ -298,7 +301,11 @@ void Application::ui_simulate() {
 
     ImGui::TextColored(ImVec4(1,1,0,1), "Set parameters");
     ImGui::InputFloat("dt", &solver.dt);
-    ImGui::InputFloat("h", &solver.h);
+    float h_input = solver.h;
+    if (ImGui::InputFloat("h", &h_input) && h_input > 0.0f) {
+        solver.h = h_input;
+        grid.set_cell_size(solver.h);
+    }
     ImGui::InputFloat("rho_0", &solver.rho_0);
     ImGui::InputFloat("k", &solver.k);
     ImGui::InputFloat("nu", &solver.nu);
@@ -419,6 +426,8 @@ void Application::ui_scene_editor() {
         ImGui::SameLine();
         if (ImGui::Button("load")) {
             SceneIO::load_from_json(solver, entry, "scenes/");
+            grid.set_cell_size(solver.h);
+            grid.populate_cells();
         }
         ImGui::SameLine();
         if (ImGui::Button("X")) {
@@ -452,8 +461,7 @@ void Application::ui_scene_editor() {
                 const glm::vec2 local_pos = mouse_pos - grid.origin;
                 const int width = static_cast<int>(std::floor(local_pos.x / grid.cell_size));
                 const int height = static_cast<int>(std::floor(local_pos.y / grid.cell_size));
-                grid.width = width;
-                grid.height = height;
+                grid.resize(width, height);
             }
         }
     }

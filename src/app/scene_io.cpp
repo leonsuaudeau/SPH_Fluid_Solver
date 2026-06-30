@@ -19,7 +19,7 @@ void SceneIO::load_from_json(FluidSolver &solver, const std::string &name, const
     solver.g = {json["g"][0], json["g"][1]};
     std::string data_file = json["data_file"];
 
-    std::ifstream bin_in(data_file);
+    std::ifstream bin_in(data_file, std::ios::binary);
     if (!bin_in) {
         throw std::runtime_error("Failed to open bin file");
     }
@@ -35,7 +35,7 @@ void SceneIO::load_from_json(FluidSolver &solver, const std::string &name, const
         size
     );
 
-    solver.particles.clear();
+    solver.clean_particles();
     for (auto &p : temp_particles) {
         solver.particles.add(p.pos, p.vel, p.acc, p.mass, p.density, p.is_fixed, p.color);
     }

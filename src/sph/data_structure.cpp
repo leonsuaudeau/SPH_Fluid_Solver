@@ -1,6 +1,7 @@
 #include "data_structure.h"
-#include <execution>
 #include <algorithm>
+#include <cmath>
+#include <execution>
 #include <iostream>
 #include <thread>
 
@@ -10,19 +11,29 @@
 
 Grid::Grid(const int width, const int height, const glm::vec2 origin, const float cell_size, Particles &particles):
     particles(particles){
-    this->width = width;
-    this->height = height;
-    this->cell_size = cell_size;
-    this->inv_cell_size = 1.0f / cell_size;
     this->origin = origin;
-    const int cell_count = width * height;
-    counts = std::vector<int>(cell_count);
-    particle_indices = std::vector<int>(cell_count * MAX_PARTICLES_PER_CELL);
+    set_cell_size(cell_size);
+    resize(width, height);
+}
+
+void Grid::resize(const int new_width, const int new_height) {
+    width = std::max(new_width, 0);
+    height = std::max(new_height, 0);
+
+    const auto cell_count = static_cast<size_t>(width) * static_cast<size_t>(height);
+    counts.assign(cell_count, 0);
+    particle_indices.assign(cell_count * MAX_PARTICLES_PER_CELL, -1);
+}
+
+void Grid::set_cell_size(const float new_cell_size) {
+    if (new_cell_size <= 0.0f) return;
+    cell_size = new_cell_size;
+    inv_cell_size = 1.0f / cell_size;
 }
 
 int Grid::get_cell_index(const float p_x, const float p_y) const {
-    const int i = static_cast<int>((p_x - origin.x) * inv_cell_size);
-    const int j = static_cast<int>((p_y - origin.y) * inv_cell_size);
+    const int i = static_cast<int>(std::floor((p_x - origin.x) * inv_cell_size));
+    const int j = static_cast<int>(std::floor((p_y - origin.y) * inv_cell_size));
     if (!is_inside(i, j)) return -1;
     return i + j * width;
 }
@@ -32,7 +43,7 @@ bool Grid::is_inside(const int x, const int y) const {
 }
 
 void Grid::populate_cells() {
-    for (int i = 0; i < width * height; i++) counts[i] = 0;
+    std::fill(counts.begin(), counts.end(), 0);
 
     for (int i = 0; i < particles.count; i++) {
         const int cell = get_cell_index(particles.p_x[i], particles.p_y[i]);
@@ -48,7 +59,7 @@ void Grid::populate_cells() {
     }
 }
 
-void Grid::calculate_neighbors(const int i, const float h, NeighborList &neighbors, int &total_neighbor_overflow_count) const {
+void Grid::calculate_neighbors(const int i, const float h, NeighborList &neighbors, int &max_neighbor_overflow_count) const {
     const float radius2 = 4.0f * h * h + 0.0001f;
 
     const float p_x_i = particles.p_x[i];
@@ -89,15 +100,15 @@ void Grid::calculate_neighbors(const int i, const float h, NeighborList &neighbo
         }
     }
     neighbors.counts[i] = neighbor_count;
-    total_neighbor_overflow_count += neighbor_overflow_count;
+    max_neighbor_overflow_count = neighbor_overflow_count > max_neighbor_overflow_count ? neighbor_overflow_count : max_neighbor_overflow_count;
 }
 
 void Grid::calculate_neighbors(const float h, NeighborList &neighbors) const {
     const float radius2 = 4.0f * h * h + 0.0001f;
     const int particle_count = particles.count;
-    int total_neighbor_overflow_count = 0;
+    int max_neighbor_overflow_count = 0;
 
-    #pragma omp parallel for schedule(static) reduction(+:total_neighbor_overflow_count)
+    #pragma omp parallel for schedule(static) reduction(max:max_neighbor_overflow_count)
     for (int i = 0; i < particle_count; i++) {
         const float p_x_i = particles.p_x[i];
         const float p_y_i = particles.p_y[i];
@@ -138,10 +149,10 @@ void Grid::calculate_neighbors(const float h, NeighborList &neighbors) const {
             }
         }
         neighbors.counts[i] = neighbor_count;
-        total_neighbor_overflow_count += neighbor_overflow_count;
+        max_neighbor_overflow_count = neighbor_overflow_count > max_neighbor_overflow_count ? neighbor_overflow_count : max_neighbor_overflow_count;
     }
-    if (total_neighbor_overflow_count > 0) {
-        std::cout << "Neighbor overflow count: " << total_neighbor_overflow_count << std::endl;
+    if (max_neighbor_overflow_count > 0) {
+        std::cout << "Neighbor overflow count: " << max_neighbor_overflow_count << std::endl;
     }
 }
 

@@ -1,6 +1,7 @@
 #include "solver.h"
 #include <execution>
 #include <chrono>
+#include <cmath>
 #include <iostream>
 #include <glm/ext/matrix_transform.hpp>
 #include "sph_integrators.h"
@@ -110,7 +111,7 @@ glm::vec2 FluidSolver::gravity_acceleration(const int i) const {
 }
 
 void FluidSolver::step(Grid &grid) {
-    int total_neighbor_overflow_count = 0;
+    int max_neighbor_overflow_count = 0;
     grid.populate_cells();
 
     // Precomputed temporary values
@@ -120,9 +121,9 @@ void FluidSolver::step(Grid &grid) {
 
     #pragma omp parallel
     {
-        #pragma omp for schedule(static) reduction(+:total_neighbor_overflow_count)
+        #pragma omp for schedule(static) reduction(max:max_neighbor_overflow_count)
         for (int i = 0; i < particles.count; i++) {
-            grid.calculate_neighbors(i, h, neighbors, total_neighbor_overflow_count);
+            grid.calculate_neighbors(i, h, neighbors, max_neighbor_overflow_count);
         }
 
         #pragma omp for schedule(static)
@@ -163,8 +164,8 @@ void FluidSolver::step(Grid &grid) {
             particles.p_y[i] = pos.y;
         }
     }
-    if (total_neighbor_overflow_count > 0) {
-        std::cout << "Neighbor overflow count: " << total_neighbor_overflow_count << std::endl;
+    if (max_neighbor_overflow_count > 0) {
+        std::cout << "Neighbor overflow count: " << max_neighbor_overflow_count << std::endl;
     }
 
     // Doing the removal process here to avoid data races in multithreading
@@ -182,8 +183,8 @@ void FluidSolver::step(Grid &grid) {
     }
     max_v = std::sqrt(max_v2);
 
-    for (const int i : temp_remove_indices) {
-        particles.remove(i);
+    for (auto it = temp_remove_indices.rbegin(); it != temp_remove_indices.rend(); ++it) {
+        particles.remove(*it);
     }
 }
 
