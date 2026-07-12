@@ -34,6 +34,23 @@ namespace sph::kernels {
         return {d_x * factor, d_y * factor};
     }
 
+    float inline cohesion_spline_2D(const float r, const float h) {
+        const float support = 2 * h;
+        if (r <= 0.0f || r > support) return 0.0f;
+
+        const float h_min_r = support - r;
+        const float h_r_3_r_3 = h_min_r * h_min_r * h_min_r * r * r * r;
+
+        const float support_2 = support * support;
+        const float support_4 = support_2 * support_2;
+        const float support_8 = support_4 * support_4;
+        const float factor = 32.0f / (3.14159265359f * support_8);
+        if (r > 0.5f * support) {
+            return factor * h_r_3_r_3;
+        }
+        return factor * (2.0f * h_r_3_r_3 - support_4 * support_2 / 64.0f);
+    }
+
 }
 
 #endif //SPH_FLUID_SOLVER_SPH_KERNEL_H

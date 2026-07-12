@@ -64,7 +64,7 @@ void print_openmp_info() {
 
 Application::Application() :
     camera(glm::vec2(0, 0), 80, 0.1f),
-    solver(0.001f, 0.9f, 1.1f, 20000, 0.5f, glm::vec2(0, -9.81f), 1.0f, 1.0f),
+    solver(0.001f, 0.9f, 1.1f, 20000, 0.5f, glm::vec2(0, -9.81f), 1.0f, 0.75f, 1.0f),
     grid(512, 512, {-256, -256}, solver.h, solver.particles){
 
     // Load files in scene path once
@@ -288,7 +288,7 @@ void Application::ui_simulate() {
         if (ImGui::Button("load")) {
             SceneIO::load_from_json(solver, entry, "snapshots/");
             grid.set_cell_size(solver.h);
-            grid.populate_cells();
+            solver.update_nu_boundaries(grid);
         }
         ImGui::SameLine();
         if (ImGui::Button("X")) {
@@ -301,12 +301,24 @@ void Application::ui_simulate() {
 
     ImGui::TextColored(ImVec4(1,1,0,1), "Set parameters");
     ImGui::InputFloat("dt", &solver.dt);
+    bool update_boundary_masses = false;
     float h_input = solver.h;
     if (ImGui::InputFloat("h", &h_input) && h_input > 0.0f) {
         solver.h = h_input;
         grid.set_cell_size(solver.h);
+        update_boundary_masses = true;
     }
-    ImGui::InputFloat("rho_0", &solver.rho_0);
+    if (ImGui::InputFloat("rho_0", &solver.rho_0)) {
+        update_boundary_masses = true;
+    }
+    if (ImGui::InputFloat("gamma_1", &solver.gamma_1)) {
+        update_boundary_masses = true;
+    }
+    ImGui::InputFloat("gamma_2", &solver.gamma_2);
+    ImGui::InputFloat("gamma_st", &solver.gamma_st);
+    if (update_boundary_masses) {
+        solver.update_nu_boundaries(grid);
+    }
     ImGui::InputFloat("k", &solver.k);
     ImGui::InputFloat("nu", &solver.nu);
 
@@ -397,7 +409,6 @@ void Application::ui_simulate() {
             }
         }
 
-
         ImGui::End();
     }
 }
@@ -427,7 +438,7 @@ void Application::ui_scene_editor() {
         if (ImGui::Button("load")) {
             SceneIO::load_from_json(solver, entry, "scenes/");
             grid.set_cell_size(solver.h);
-            grid.populate_cells();
+            solver.update_nu_boundaries(grid);
         }
         ImGui::SameLine();
         if (ImGui::Button("X")) {
@@ -490,6 +501,7 @@ void Application::ui_scene_editor() {
 
         if (ImGui::Button("Place") || (ImGui::IsKeyPressed(ImGuiKey_Enter) && !state.currently_typing)) {
             solver.add_particle_grid(preview_particles);
+            solver.update_nu_boundaries(grid);
         }
         if (ImGui::Button("Clear")) {
             solver.particles.clear();
