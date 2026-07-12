@@ -14,17 +14,18 @@ namespace stats {
 
 class FluidSolver {
 public:
-    FluidSolver(float dt, float h, float rho_0, float k, float nu, glm::vec2 g);
+    FluidSolver(float dt, float h, float rho_0, float k, float nu, glm::vec2 g, float gamma_1, float gamma_2);
     void step(Grid &grid);
     void add_particle(glm::vec2 o, glm::vec3 color, bool is_fixed = false);
     void add_particle_grid(glm::ivec2 N, glm::vec2 o, glm::vec3 color, bool is_fixed = false, float r = 0.0f);
     void add_particle_grid(const Particles &p_other);
     void clean_particles();
     [[nodiscard]] int get_num_particles() const {return particles.count;}
-    [[nodiscard]] float get_particle_density(int i) const {return particles.rho[i];}
+    [[nodiscard]] float get_particle_density(const int i) const {return particles.rho[i];}
     [[nodiscard]] std::vector<int> get_neighbors(int i) const;
     [[nodiscard]] float get_cfl_lambda() const;
     [[nodiscard]] float get_particle_mass() const;
+    [[nodiscard]] float get_particle_mass_nu(int i, sph::kernels::kernel_constants kernel_const) const;
 
     Particles particles;
     NeighborList neighbors;
@@ -35,6 +36,8 @@ public:
     float k;
     float nu;
     float max_v;
+    float gamma_1; // density coefficient for missing boundary samples
+    float gamma_2; // pressure acceleration coefficient
     glm::vec2 g{};
 
 private:

@@ -7,7 +7,7 @@
 #include "sph_integrators.h"
 #include "sph_kernel.h"
 
-FluidSolver::FluidSolver(const float dt, const float h, const float rho_0, const float k, const float nu, const glm::vec2 g) {
+FluidSolver::FluidSolver(const float dt, const float h, const float rho_0, const float k, const float nu, const glm::vec2 g, const float gamma_1, const float gamma_2) {
     this->dt = dt;
     this->h = h;
     this->rho_0 = rho_0;
@@ -15,6 +15,8 @@ FluidSolver::FluidSolver(const float dt, const float h, const float rho_0, const
     this->nu = nu;
     this->g = g;
     this->max_v = 0;
+    this->gamma_1 = gamma_1;
+    this->gamma_2 = gamma_2;
 }
 
 void FluidSolver::add_particle(const glm::vec2 o, const glm::vec3 color, const bool is_fixed) {
@@ -39,6 +41,25 @@ void FluidSolver::add_particle_grid(const Particles &p_other) {
 
 float FluidSolver::get_particle_mass() const {
     return h * h * rho_0;
+}
+
+float FluidSolver::get_particle_mass_nu(const int i, sph::kernels::kernel_constants kernel_const) const {
+    float sum = 4.0f * kernel_const.alpha;
+    const float p_x_i = particles.p_x[i];
+    const float p_y_i = particles.p_y[i];
+
+    const int start = i * MAX_NEIGHBORS;
+    for (int curr = 0; curr < neighbors.counts[i]; curr++) {
+        const int j = neighbors.neighbors[start + curr];
+        if (!particles.is_bound[j]) continue;
+
+        const float d_p_x = p_x_i - particles.p_x[j];
+        const float d_p_y = p_y_i - particles.p_y[j];
+        const float dot_p_p = d_p_x*d_p_x + d_p_y*d_p_y;
+        sum += sph::kernels::cubic_spline_2D(dot_p_p, kernel_const);
+    }
+
+    return rho_0 * gamma_1 / sum;
 }
 
 float FluidSolver::density_explicit(const int i, const sph::kernels::kernel_constants kernel_const) const {
@@ -91,10 +112,14 @@ glm::vec2 FluidSolver::combined_acceleration(const int i, const sph::kernels::ke
 
         const float m_j = particles.m[j];
 
-        const float j_frac = (particles.is_bound[j])? i_frac : p_over_rho2[j];
-        const float j_m_over_rho = (particles.is_bound[j])? particles.m[j] / particles.rho[i] : m_over_rho[j];
+        const u_int8_t is_bound_j = particles.is_bound[j];
 
-        const float p_sum_no_deriv = m_j * (i_frac + j_frac);
+        // todo, us a single if-else instead of this!
+        const float j_frac = is_bound_j? i_frac : p_over_rho2[j];
+        const float j_m_over_rho = is_bound_j? particles.m[j] / particles.rho[i] : m_over_rho[j];
+        const float scaling = is_bound_j? gamma_2 : 1.0f;
+
+        const float p_sum_no_deriv = scaling * m_j * (i_frac + j_frac);
         const float v_sum_no_deriv = j_m_over_rho * dot_v_p / (dot_p_p + eps);
 
         p_sum_x += p_sum_no_deriv * kernel_deriv.x;

@@ -64,7 +64,7 @@ void print_openmp_info() {
 
 Application::Application() :
     camera(glm::vec2(0, 0), 80, 0.1f),
-    solver(0.001f, 0.9f, 1.1f, 20000, 0.5f, glm::vec2(0, -9.81f)),
+    solver(0.001f, 0.9f, 1.1f, 20000, 0.5f, glm::vec2(0, -9.81f), 1.0f, 1.0f),
     grid(512, 512, {-256, -256}, solver.h, solver.particles){
 
     // Load files in scene path once
