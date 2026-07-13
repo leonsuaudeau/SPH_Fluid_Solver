@@ -14,7 +14,7 @@ namespace stats {
 
 class FluidSolver {
 public:
-    FluidSolver(float dt, float h, float rho_0, float k, float nu, glm::vec2 g, float gamma_1, float gamma_2, float gamma_st);
+    FluidSolver(float dt, float h, float rho_0, float k, float nu, glm::vec2 g, float gamma_1, float gamma_2, float gamma_st, float gamma_ad);
     void step(Grid &grid);
     void add_particle(glm::vec2 o, glm::vec3 color, bool is_fixed = false);
     void add_particle_grid(glm::ivec2 N, glm::vec2 o, glm::vec3 color, bool is_fixed = false, float r = 0.0f);
@@ -40,6 +40,7 @@ public:
     float gamma_1; // density coefficient for missing boundary samples
     float gamma_2; // pressure acceleration coefficient
     float gamma_st; // surface tension coefficient
+    float gamma_ad; // adhesion coefficient
     glm::vec2 g{};
 
 private:
@@ -47,7 +48,7 @@ private:
     [[nodiscard]] float pressure(int i) const;
     [[nodiscard]] glm::vec2 combined_acceleration(int i, const sph::kernels::kernel_constants &kernel_const, const std::vector<float> &p_over_rho2, const std::vector<float> &m_over_rho) const;
     [[nodiscard]] glm::vec2 gravity_acceleration(int i) const;
-    [[nodiscard]] glm::vec2 surface_tension_acceleration(int i) const;
+    [[nodiscard]] glm::vec2 surface_tension_adhesion_acceleration(int i) const;
 };
 
 #endif //SPH_FLUID_SOLVER_SOLVER_H

@@ -64,7 +64,7 @@ void print_openmp_info() {
 
 Application::Application() :
     camera(glm::vec2(0, 0), 80, 0.1f),
-    solver(0.001f, 0.9f, 1.1f, 20000, 0.5f, glm::vec2(0, -9.81f), 1.0f, 0.9f, 1.0f),
+    solver(0.001f, 0.9f, 1.1f, 20000, 0.5f, glm::vec2(0, -9.81f), 1.0f, 0.9f, 200.0f, 1000.0f),
     grid(512, 512, {-256, -256}, solver.h, solver.particles){
 
     // Load files in scene path once
@@ -316,6 +316,7 @@ void Application::ui_simulate() {
     }
     ImGui::InputFloat("gamma_2", &solver.gamma_2);
     ImGui::InputFloat("gamma_st", &solver.gamma_st);
+    ImGui::InputFloat("gamma_ad", &solver.gamma_ad);
     if (update_boundary_masses) {
         solver.update_nu_boundaries(grid);
     }
@@ -486,6 +487,7 @@ void Application::ui_scene_editor() {
             {
                 if (ImGui::MenuItem("Single Particle", "Ctrl+P")) { state.editor_mode = single; }
                 if (ImGui::MenuItem("Rectangle", "Ctrl+R"))   { state.editor_mode = rectangle; }
+                if (ImGui::MenuItem("Sphere", "Ctrl+S"))   { state.editor_mode = sphere; }
                 ImGui::EndMenu();
             }
             ImGui::EndMenuBar();
@@ -497,6 +499,10 @@ void Application::ui_scene_editor() {
         if (state.editor_mode == rectangle) {
             ImGui::InputInt2("n", state.rect_n);
             ImGui::SliderAngle("r", &state.rect_r);
+        }
+
+        if (state.editor_mode == sphere) {
+            ImGui::InputFloat("radius", &state.sphere_radius);
         }
 
         if (ImGui::Button("Place") || (ImGui::IsKeyPressed(ImGuiKey_Enter) && !state.currently_typing)) {
@@ -528,6 +534,21 @@ void Application::ui_scene_editor() {
                     const glm::vec4 r_pos = glm::vec4(x - x_offset, y - y_offset, 0.0f, 0.0f) * R;
                     const glm::vec2 pos = state.placement_origin + glm::vec2(r_pos.x, r_pos.y) * solver.h;
                     preview_particles.add(pos, {0,0}, {0,0}, m_i, solver.rho_0, state.place_boundary, color);
+                }
+            }
+        } else if (state.editor_mode == sphere) {
+            if (state.sphere_radius > 0.0f) {
+                const int radius_steps = static_cast<int>(std::ceil(state.sphere_radius / solver.h));
+                const float radius2 = state.sphere_radius * state.sphere_radius;
+
+                for (int x = -radius_steps; x <= radius_steps; x++) {
+                    for (int y = -radius_steps; y <= radius_steps; y++) {
+                        const glm::vec2 offset = glm::vec2(x, y) * solver.h;
+                        if (glm::dot(offset, offset) > radius2) continue;
+
+                        const glm::vec2 pos = state.placement_origin + offset;
+                        preview_particles.add(pos, {0,0}, {0,0}, m_i, solver.rho_0, state.place_boundary, color);
+                    }
                 }
             }
         }else {

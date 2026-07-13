@@ -51,6 +51,14 @@ namespace sph::kernels {
         return factor * (2.0f * h_r_3_r_3 - support_4 * support_2 / 64.0f);
     }
 
+    float inline adhesion_spline_2D(const float r, const float h) {
+        const float support = 2 * h;
+        if (r <= h || r > support) return 0.0f;
+
+        const float x = -4.0f * r * r / support + 6.0f * r - 2.0f * support;
+        return 0.007f / glm::pow(support, 2.25f) * glm::pow(glm::max(x, 0.0f), 0.25f);
+    }
+
 }
 
 #endif //SPH_FLUID_SOLVER_SPH_KERNEL_H

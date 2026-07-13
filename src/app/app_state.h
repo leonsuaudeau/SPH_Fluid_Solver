@@ -12,7 +12,8 @@ enum AppMode {
 
 enum EditorMode {
     single,
-    rectangle
+    rectangle,
+    sphere,
 };
 
 struct AppState {
@@ -40,6 +41,7 @@ struct AppState {
     bool edit_delete = false;
     int rect_n [2]{0, 0};
     float rect_r = 0.0f;
+    float sphere_radius = 0.0f;
     glm::vec2 placement_origin{0, 0};
 
     // TODO: proper input handler
