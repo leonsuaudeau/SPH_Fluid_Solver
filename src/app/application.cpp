@@ -23,6 +23,8 @@
 
 
 constexpr ImGuiWindowFlags global_flags = ImGuiWindowFlags_AlwaysAutoResize;
+constexpr const char *dt_float_format = "%.8f";
+constexpr const char *precise_float_format = "%.6g";
 
 static void glfw_error_callback(int error, const char* description) {
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
@@ -315,28 +317,28 @@ void Application::ui_simulate() {
     ImGui::EndChild();
 
     ImGui::TextColored(ImVec4(1,1,0,1), "Set parameters");
-    ImGui::InputFloat("dt", &solver.dt);
+    ImGui::InputFloat("dt", &solver.dt, 0.0f, 0.0f, dt_float_format);
     bool update_boundary_masses = false;
     float h_input = solver.h;
-    if (ImGui::InputFloat("h", &h_input) && h_input > 0.0f) {
+    if (ImGui::InputFloat("h", &h_input, 0.0f, 0.0f, precise_float_format) && h_input > 0.0f) {
         solver.h = h_input;
         grid.set_cell_size(solver.h);
         update_boundary_masses = true;
     }
-    if (ImGui::InputFloat("rho_0", &solver.rho_0)) {
+    if (ImGui::InputFloat("rho_0", &solver.rho_0, 0.0f, 0.0f, precise_float_format)) {
         update_boundary_masses = true;
     }
-    if (ImGui::InputFloat("gamma_1", &solver.gamma_1)) {
+    if (ImGui::InputFloat("gamma_1", &solver.gamma_1, 0.0f, 0.0f, precise_float_format)) {
         update_boundary_masses = true;
     }
-    ImGui::InputFloat("gamma_2", &solver.gamma_2);
-    ImGui::InputFloat("gamma_st", &solver.gamma_st);
-    ImGui::InputFloat("gamma_ad", &solver.gamma_ad);
+    ImGui::InputFloat("gamma_2", &solver.gamma_2, 0.0f, 0.0f, precise_float_format);
+    ImGui::InputFloat("gamma_st", &solver.gamma_st, 0.0f, 0.0f, precise_float_format);
+    ImGui::InputFloat("gamma_ad", &solver.gamma_ad, 0.0f, 0.0f, precise_float_format);
     if (update_boundary_masses) {
         solver.update_nu_boundaries(grid);
     }
-    ImGui::InputFloat("k", &solver.k);
-    ImGui::InputFloat("nu", &solver.nu);
+    ImGui::InputFloat("k", &solver.k, 0.0f, 0.0f, precise_float_format);
+    ImGui::InputFloat("nu", &solver.nu, 0.0f, 0.0f, precise_float_format);
 
     if (ImGui::Button("Live statistics")) {
         state.plot_enabled = !state.plot_enabled;
@@ -444,8 +446,8 @@ void Application::ui_simulate() {
         }
 
         if (i == state.selected_obj_idx) {
-            ImGui::InputFloat2("anim_move", obj.move_each_step);
-            ImGui::InputFloat("anim_rot", &obj.angle_each_step);
+            ImGui::InputFloat2("anim_move", obj.move_each_step, precise_float_format);
+            ImGui::InputFloat("anim_rot", &obj.angle_each_step, 0.0f, 0.0f, precise_float_format);
         }
 
         ImGui::PopID();
@@ -583,12 +585,12 @@ void Application::ui_scene_editor() {
         }
 
         if (state.editor_mode == sphere) {
-            ImGui::InputFloat("radius", &state.sphere_radius);
+            ImGui::InputFloat("radius", &state.sphere_radius, 0.0f, 0.0f, precise_float_format);
         }
 
         if (state.create_object) {
-            ImGui::InputFloat2("anim_move", state.obj_move);
-            ImGui::InputFloat("anim_rot", &state.obj_rot);
+            ImGui::InputFloat2("anim_move", state.obj_move, precise_float_format);
+            ImGui::InputFloat("anim_rot", &state.obj_rot, 0.0f, 0.0f, precise_float_format);
         }
 
         if (ImGui::Button("Place") || (ImGui::IsKeyPressed(ImGuiKey_Enter) && !state.currently_typing)) {

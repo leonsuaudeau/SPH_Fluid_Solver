@@ -51,7 +51,6 @@ def main():
     X3, Y3 = read_from_file_manual("tub40k.bin")
     X4, Y4 = read_from_file_manual("tub80k.bin")
     X5, Y5 = read_from_file_manual("tub160k.bin")
-    X6, Y6 = read_from_file_manual("tub320k.bin")
 
     _fig, ax = plt.subplots(figsize=(8,5))
     ax.set_ylim([0, 0.06])
@@ -61,8 +60,26 @@ def main():
     ax.plot(X3, Y3, label="k=40k")
     ax.plot(X4, Y4, label="k=80k")
     ax.plot(X5, Y5, label="k=160k")
-    ax.plot(X6, Y6, label="k=320k")
 
+    ax.set_xlabel("t")
+    ax.set_ylabel("density error")
+    ax.legend()
+
+    plt.show()
+
+def main2():
+    X1, Y1 = read_from_file_manual("tower400.bin")
+    X2, Y2 = read_from_file_manual("tower200.bin")
+    X3, Y3 = read_from_file_manual("tower100.bin")
+    X4, Y4 = read_from_file_manual("tower50.bin")
+
+    _fig, ax = plt.subplots(figsize=(8,5))
+    ax.set_ylim([0, 0.06])
+
+    ax.plot(X1, Y1, label="water column 400h")
+    ax.plot(X2, Y2, label="water column 200h")
+    ax.plot(X3, Y3, label="water column 100h")
+    ax.plot(X4, Y4, label="water column 50h")
     ax.set_xlabel("t")
     ax.set_ylabel("density error")
     ax.legend()
