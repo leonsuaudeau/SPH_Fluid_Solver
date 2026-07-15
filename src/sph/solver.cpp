@@ -205,12 +205,12 @@ void FluidSolver::step(Grid &grid, std::vector<ParticleRemoval> &removals) {
 
     #pragma omp parallel
     {
-        #pragma omp for schedule(static) reduction(max:max_neighbor_overflow_count)
+        #pragma omp for  reduction(max:max_neighbor_overflow_count)
         for (int i = 0; i < particles.count; i++) {
             grid.calculate_neighbors(i, h, neighbors, max_neighbor_overflow_count);
         }
 
-        #pragma omp for schedule(static)
+        #pragma omp for
         for (int i = 0; i < particles.count; i++) {
             if (particles.is_bound[i]) continue;
             const float rho_i = density_explicit(i, kernel_const);
@@ -222,7 +222,7 @@ void FluidSolver::step(Grid &grid, std::vector<ParticleRemoval> &removals) {
             m_over_rho[i] = particles.m[i] / rho_i;
         }
 
-        #pragma omp for schedule(static)
+        #pragma omp for
         for (int i = 0; i < particles.count; i++) {
             if (particles.is_bound[i]) continue;
 
@@ -235,7 +235,7 @@ void FluidSolver::step(Grid &grid, std::vector<ParticleRemoval> &removals) {
             particles.a_y[i] = acc.y;
         }
 
-        #pragma omp for schedule(static)
+        #pragma omp for
         for (int i = 0; i < particles.count; i++) {
             if (particles.is_bound[i]) continue;
 

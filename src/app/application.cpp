@@ -361,10 +361,10 @@ void Application::ui_simulate() {
 
             for (int i = 0; i < solver.get_num_particles(); i++) {
                 if (solver.particles.is_bound[i]) continue;
-                rho_avg += solver.particles.rho[i] - solver.rho_0;
+                rho_avg += (solver.particles.rho[i] - solver.rho_0) / solver.rho_0;
 
                 if (solver.particles.rho[i] < solver.rho_0) continue;
-                rho_avg_no_surface += solver.particles.rho[i] - solver.rho_0;
+                rho_avg_no_surface += (solver.particles.rho[i] - solver.rho_0) / solver.rho_0;
             }
 
             rho_avg /= static_cast<float>(solver.get_num_particles());
