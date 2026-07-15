@@ -194,7 +194,7 @@ glm::vec2 FluidSolver::surface_tension_adhesion_acceleration(const int i) const 
     return sum / m_i;
 }
 
-void FluidSolver::step(Grid &grid) {
+void FluidSolver::step(Grid &grid, std::vector<ParticleRemoval> &removals) {
     int max_neighbor_overflow_count = 0;
     grid.populate_cells();
 
@@ -270,7 +270,10 @@ void FluidSolver::step(Grid &grid) {
     max_v = std::sqrt(max_v2);
 
     for (auto it = temp_remove_indices.rbegin(); it != temp_remove_indices.rend(); ++it) {
-        particles.remove(*it);
+        const int removed = *it;
+        const int moved_from = particles.count - 1;
+        removals.push_back({removed, moved_from});
+        particles.remove(removed);
     }
 }
 

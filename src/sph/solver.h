@@ -3,6 +3,7 @@
 #include <vector>
 #include "data_structure.h"
 #include "particle.h"
+#include "../app/object.h"
 
 namespace sph::kernels {
     struct kernel_constants;
@@ -15,7 +16,7 @@ namespace stats {
 class FluidSolver {
 public:
     FluidSolver(float dt, float h, float rho_0, float k, float nu, glm::vec2 g, float gamma_1, float gamma_2, float gamma_st, float gamma_ad);
-    void step(Grid &grid);
+    void step(Grid &grid, std::vector<ParticleRemoval> &removals);
     void add_particle(glm::vec2 o, glm::vec3 color, bool is_fixed = false);
     void add_particle_grid(glm::ivec2 N, glm::vec2 o, glm::vec3 color, bool is_fixed = false, float r = 0.0f);
     void add_particle_grid(const Particles &p_other);

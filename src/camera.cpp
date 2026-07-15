@@ -6,8 +6,8 @@
 #include "glm/gtc/matrix_transform.hpp"
 
 Camera2D::Camera2D(const glm::vec2 position, const float scale, const float speed) {
-    move(position.x, position.y);
-    zoom(scale);
+    this->position = position;
+    this->scale = glm::max(scale, 0.0f);
     this->speed = speed;
 }
 
@@ -20,8 +20,8 @@ glm::mat4 Camera2D::getProjectionMatrix() const {
 }
 
 void Camera2D::move(const float x, const float y) {
-    position.x += x * speed;
-    position.y += y * speed;
+    position.x += x * speed * scale;
+    position.y += y * speed * scale;
 }
 
 void Camera2D::setPosition(const float x, const float y) {

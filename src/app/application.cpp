@@ -63,7 +63,7 @@ void print_openmp_info() {
     }
 
 Application::Application() :
-    camera(glm::vec2(0, 0), 80, 0.1f),
+    camera(glm::vec2(0, 0), 80, 0.00125f),
     solver(0.001f, 0.9f, 1.1f, 20000, 0.5f, glm::vec2(0, -9.81f), 1.0f, 0.9f, 200.0f, 1000.0f),
     grid(512, 512, {-256, -256}, solver.h, solver.particles){
 
@@ -135,7 +135,19 @@ int Application::run() {
         }
 
         if (!state.paused) {
-            solver.step(grid);
+            // handle object movement
+            for(auto &obj : objects) {
+                obj.update(solver.particles);
+            }
+
+            std::vector<ParticleRemoval> removals;
+            solver.step(grid, removals);
+            for (const ParticleRemoval &removal : removals) {
+                for (Object &obj : objects) {
+                    obj.on_particle_removed(removal.removed_index, removal.moved_from_index);
+                }
+            }
+
             state.spigot_cooldown += solver.dt;
             if (state.spigot_enabled && state.spigot_cooldown > 0.05f) {
                 state.spigot_cooldown = 0;
@@ -289,6 +301,9 @@ void Application::ui_simulate() {
             SceneIO::load_from_json(solver, entry, "snapshots/");
             grid.set_cell_size(solver.h);
             solver.update_nu_boundaries(grid);
+            objects.clear();
+            state.selected_obj_idx = -1;
+            state.dragging_object = false;
         }
         ImGui::SameLine();
         if (ImGui::Button("X")) {
@@ -409,8 +424,68 @@ void Application::ui_simulate() {
                 state.currently_typing = false;
             }
         }
-
         ImGui::End();
+    }
+
+    // object menu
+    ImGui::Begin("Object control", nullptr, global_flags);
+    ImGui::BeginChild("Scrolling", ImVec2(280, 120), ImGuiChildFlags_None);
+    for (int i = 0; i < objects.size(); i++) {
+        Object &obj = objects[i];
+        ImGui::PushID(i);
+        if (i == state.selected_obj_idx) {
+            ImGui::TextColored(ImVec4(1,0,0,1), "obj_%d", i + 1);
+        }else {
+            ImGui::TextColored(ImVec4(0,1,0,1), "obj_%d", i + 1);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("select")) {
+            state.selected_obj_idx = i;
+        }
+
+        if (i == state.selected_obj_idx) {
+            ImGui::InputFloat2("anim_move", obj.move_each_step);
+            ImGui::InputFloat("anim_rot", &obj.angle_each_step);
+        }
+
+        ImGui::PopID();
+    }
+    ImGui::EndChild();
+    ImGui::End();
+
+    if (state.selected_obj_idx < 0 || state.selected_obj_idx >= static_cast<int>(objects.size())) {
+        state.selected_obj_idx = -1;
+        state.dragging_object = false;
+        return;
+    }
+
+    Object &selected_obj = objects[state.selected_obj_idx];
+    const bool mouse_available = !ImGui::GetIO().WantCaptureMouse;
+    const glm::vec2 mouse_pos = camera.get_cursor_world_pos(window);
+
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && mouse_available) {
+        const float grab_radius = solver.h;
+        const float grab_radius2 = grab_radius * grab_radius;
+
+        for (const int i : selected_obj.particle_indices) {
+            if (i < 0 || i >= solver.particles.count) continue;
+
+            const glm::vec2 particle_pos{solver.particles.p_x[i], solver.particles.p_y[i]};
+            if (glm::dot(mouse_pos - particle_pos, mouse_pos - particle_pos) <= grab_radius2) {
+                state.dragging_object = true;
+                state.mouse_drag_offset = mouse_pos - selected_obj.origin;
+                break;
+            }
+        }
+    }
+
+    if (state.dragging_object && ImGui::IsMouseDown(ImGuiMouseButton_Left) && mouse_available) {
+        const glm::vec2 delta = (mouse_pos - state.mouse_drag_offset) - selected_obj.origin;
+        selected_obj.move(delta.x, delta.y, solver.particles);
+    }
+
+    if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+        state.dragging_object = false;
     }
 }
 
@@ -440,6 +515,9 @@ void Application::ui_scene_editor() {
             SceneIO::load_from_json(solver, entry, "scenes/");
             grid.set_cell_size(solver.h);
             solver.update_nu_boundaries(grid);
+            objects.clear();
+            state.selected_obj_idx = -1;
+            state.dragging_object = false;
         }
         ImGui::SameLine();
         if (ImGui::Button("X")) {
@@ -479,13 +557,12 @@ void Application::ui_scene_editor() {
     }
 
     if (state.placement_tool_active) {
-        ImGui::SetNextWindowSizeConstraints( ImVec2(200, 100), ImVec2(200, FLT_MAX));
+        ImGui::SetNextWindowSizeConstraints( ImVec2(300, 100), ImVec2(300, FLT_MAX));
         ImGui::Begin("Placement tool", &state.placement_tool_active, ImGuiWindowFlags_MenuBar);
         if (ImGui::BeginMenuBar())
         {
             if (ImGui::BeginMenu("Shape"))
             {
-                if (ImGui::MenuItem("Single Particle", "Ctrl+P")) { state.editor_mode = single; }
                 if (ImGui::MenuItem("Rectangle", "Ctrl+R"))   { state.editor_mode = rectangle; }
                 if (ImGui::MenuItem("Sphere", "Ctrl+S"))   { state.editor_mode = sphere; }
                 ImGui::EndMenu();
@@ -494,6 +571,10 @@ void Application::ui_scene_editor() {
         }
         ImGui::ColorEdit4("Color", &state.selected_color[0]);
         ImGui::Checkbox("Boundary", &state.place_boundary);
+        if (state.place_boundary) {
+            ImGui::SameLine();
+            ImGui::Checkbox("Object", &state.create_object);
+        }
         ImGui::SameLine();
         ImGui::Checkbox("Remove", &state.edit_delete);
         if (state.editor_mode == rectangle) {
@@ -505,25 +586,66 @@ void Application::ui_scene_editor() {
             ImGui::InputFloat("radius", &state.sphere_radius);
         }
 
+        if (state.create_object) {
+            ImGui::InputFloat2("anim_move", state.obj_move);
+            ImGui::InputFloat("anim_rot", &state.obj_rot);
+        }
+
         if (ImGui::Button("Place") || (ImGui::IsKeyPressed(ImGuiKey_Enter) && !state.currently_typing)) {
+            if (state.place_boundary && state.create_object && preview_particles.count > 0) {
+                std::vector<int> particle_indices;
+                const int start = solver.particles.count;
+                const int count = std::min(preview_particles.count, solver.particles.capacity - start);
+
+                particle_indices.reserve(count);
+                for (int i = 0; i < count; i++) {
+                    particle_indices.push_back(start + i);
+                }
+
+                objects.push_back(Object(particle_indices, state.placement_origin, {state.obj_move[0] * solver.dt, state.obj_move[1] * solver.dt}, state.obj_rot * solver.dt));
+            }
+
             solver.add_particle_grid(preview_particles);
             solver.update_nu_boundaries(grid);
         }
         if (ImGui::Button("Clear")) {
             solver.particles.clear();
+            objects.clear();
+            state.selected_obj_idx = -1;
+            state.dragging_object = false;
         }
+        ImGui::Text("x: %.2f  y: %.2f", state.placement_origin.x, state.placement_origin.y);
         ImGui::End();
+
+        // mouse dragging placement
+        const bool mouse_available = !ImGui::GetIO().WantCaptureMouse;
+        const glm::vec2 mouse_pos = camera.get_cursor_world_pos(window);
+
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && mouse_available) {
+            const float grab_radius = solver.h;
+            const float grab_radius2 = grab_radius * grab_radius;
+
+            for (int i = 0; i < preview_particles.count; i++) {
+                const glm::vec2 particle_pos{preview_particles.p_x[i], preview_particles.p_y[i]};
+                if (glm::dot(mouse_pos - particle_pos, mouse_pos - particle_pos) <= grab_radius2) {
+                    state.dragging_placement = true;
+                    state.mouse_drag_offset = mouse_pos - state.placement_origin;
+                    break;
+                }
+            }
+        }
+
+        if (state.dragging_placement && ImGui::IsMouseDown(ImGuiMouseButton_Left) && mouse_available) {
+            state.placement_origin = mouse_pos - state.mouse_drag_offset;
+        }
+
+        if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+            state.dragging_placement = false;
+        }
 
         preview_particles.clear(); // TODO: maybe we can only update when something actually changes?
         const glm::vec3 color{state.selected_color[0], state.selected_color[1], state.selected_color[2]};
         const float m_i = solver.get_particle_mass();
-
-        if (ImGui::IsMouseDragging(ImGuiMouseButton_Left) && !ImGui::GetIO().WantCaptureMouse) {
-            state.placement_origin = camera.get_cursor_world_pos(window);
-        }
-
-        // TODO: no particle overlap, I need to use a grid or something for initialisation!
-        // TODO: make it possible to avoid storing parameters
 
         if (state.editor_mode == rectangle) {
             const glm::mat4 R = glm::rotate(glm::mat4(1.0f), state.rect_r, glm::vec3(0,0,1));
@@ -551,9 +673,6 @@ void Application::ui_scene_editor() {
                     }
                 }
             }
-        }else {
-            const glm::vec2 pos = state.placement_origin + glm::vec2(state.rect_n[0], state.rect_n[1]) * solver.h;
-            preview_particles.add(pos, {0,0}, {0,0}, m_i, solver.rho_0, state.place_boundary, color);
         }
     }else {
         preview_particles.clear();

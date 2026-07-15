@@ -5,6 +5,7 @@
 #include "app_state.h"
 #include "camera.h"
 #include "grid_renderer.h"
+#include "object.h"
 #include "particle_renderer.h"
 #include "solver.h"
 #include "screen_recorder.h"
@@ -34,6 +35,7 @@ private:
     std::vector<std::string> snapshots;
     Particles preview_particles;
     stats::Sequence stat_seq{};
+    std::vector<Object> objects;
 };
 
 #endif //SPH_FLUID_SOLVER_APPLICATION_H

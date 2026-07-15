@@ -2,6 +2,7 @@
 #define SPH_FLUID_SOLVER_APP_STATE_H
 #include <glm/vec2.hpp>
 
+#include "object.h"
 #include "particle.h"
 
 enum AppMode {
@@ -11,7 +12,6 @@ enum AppMode {
 };
 
 enum EditorMode {
-    single,
     rectangle,
     sphere,
 };
@@ -43,6 +43,14 @@ struct AppState {
     float rect_r = 0.0f;
     float sphere_radius = 0.0f;
     glm::vec2 placement_origin{0, 0};
+    bool create_object = false;
+    float obj_move [2]{0, 0};
+    float obj_rot = 0.0f;
+    int selected_obj_idx = -1;
+
+    bool dragging_placement = false;
+    bool dragging_object = false;
+    glm::vec2 mouse_drag_offset{0,0};
 
     // TODO: proper input handler
     bool space_last_pressed = false;

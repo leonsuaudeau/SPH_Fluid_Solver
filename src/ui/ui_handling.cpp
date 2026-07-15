@@ -36,6 +36,7 @@ void Ui::set_debug_overlay(const AppState &state, const FluidSolver &solver, con
             ImGui::Text("Selected particle: %d", state.selected_particle_index);
             ImGui::Text("Density: %f", solver.particles.rho[state.selected_particle_index]);
             ImGui::Text("Pressure: %f", solver.particles.p[state.selected_particle_index]);
+            ImGui::Text("Mass: %f", solver.particles.m[state.selected_particle_index]);
         }
     }
     ImGui::End();
