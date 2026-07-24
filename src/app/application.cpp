@@ -66,7 +66,7 @@ void print_openmp_info() {
 
 Application::Application() :
     camera(glm::vec2(0, 0), 80, 0.00125f),
-    solver(0.001f, 0.9f, 1.1f, 20000, 0.5f, glm::vec2(0, -9.81f), 1.0f, 0.9f, 200.0f, 1000.0f),
+    solver(0.001f, 0.9f, 1.1f, 20000, 0.5f, glm::vec2(0, -9.81f), 1.0f, 0.9f, 100.0f, 1.0f, 1000.0f),
     grid(512, 512, {-256, -256}, solver.h, solver.particles){
 
     // Load files in scene path once
@@ -332,7 +332,8 @@ void Application::ui_simulate() {
         update_boundary_masses = true;
     }
     ImGui::InputFloat("gamma_2", &solver.gamma_2, 0.0f, 0.0f, precise_float_format);
-    ImGui::InputFloat("gamma_st", &solver.gamma_st, 0.0f, 0.0f, precise_float_format);
+    ImGui::InputFloat("gamma_coh", &solver.gamma_coh, 0.0f, 0.0f, precise_float_format);
+    ImGui::InputFloat("gamma_curv", &solver.gamma_curv, 0.0f, 0.0f, precise_float_format);
     ImGui::InputFloat("gamma_ad", &solver.gamma_ad, 0.0f, 0.0f, precise_float_format);
     if (update_boundary_masses) {
         solver.update_nu_boundaries(grid);

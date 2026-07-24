@@ -15,7 +15,7 @@ namespace stats {
 
 class FluidSolver {
 public:
-    FluidSolver(float dt, float h, float rho_0, float k, float nu, glm::vec2 g, float gamma_1, float gamma_2, float gamma_st, float gamma_ad);
+    FluidSolver(float dt, float h, float rho_0, float k, float nu, glm::vec2 g, float gamma_1, float gamma_2, float gamma_coh, float gamma_curv, float gamma_ad);
     void step(Grid &grid, std::vector<ParticleRemoval> &removals);
     void add_particle(glm::vec2 o, glm::vec3 color, bool is_fixed = false);
     void add_particle_grid(glm::ivec2 N, glm::vec2 o, glm::vec3 color, bool is_fixed = false, float r = 0.0f);
@@ -40,7 +40,10 @@ public:
     float max_v;
     float gamma_1; // density coefficient for missing boundary samples
     float gamma_2; // pressure acceleration coefficient
-    float gamma_st; // surface tension coefficient
+    /* A ratio of 100 to 1 seems to work very nicely for cohesion and curvature */
+    /* gamma_ad should be about 10x gamma_coh, interesting setup 1000, 10, 10000*/
+    float gamma_coh; // surface tension cohesion coefficient
+    float gamma_curv; // surface tension curvature coefficient
     float gamma_ad; // adhesion coefficient
     glm::vec2 g{};
 

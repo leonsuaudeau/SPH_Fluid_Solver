@@ -7,7 +7,8 @@
 #include "sph_integrators.h"
 #include "sph_kernel.h"
 
-FluidSolver::FluidSolver(const float dt, const float h, const float rho_0, const float k, const float nu, const glm::vec2 g, const float gamma_1, const float gamma_2, const float gamma_st, const float gamma_ad) {
+FluidSolver::FluidSolver(const float dt, const float h, const float rho_0, const float k, const float nu, const glm::vec2 g,
+    const float gamma_1, const float gamma_2, const float gamma_coh, const float gamma_curv, const float gamma_ad) {
     this->dt = dt;
     this->h = h;
     this->rho_0 = rho_0;
@@ -17,7 +18,8 @@ FluidSolver::FluidSolver(const float dt, const float h, const float rho_0, const
     this->max_v = 0;
     this->gamma_1 = gamma_1;
     this->gamma_2 = gamma_2;
-    this->gamma_st = gamma_st;
+    this->gamma_coh = gamma_coh;
+    this->gamma_curv = gamma_curv;
     this->gamma_ad = gamma_ad;
 }
 
@@ -159,7 +161,35 @@ glm::vec2 FluidSolver::gravity_acceleration(const int i) const {
     return g / particles.m[i];
 }
 
-glm::vec2 FluidSolver::surface_tension_adhesion_acceleration(const int i) const {
+glm::vec2 FluidSolver::calculate_st_n(const int i, const std::vector<float> &m_over_rho, const sph::kernels::kernel_constants &kernel_const) const {
+    glm::vec2 n(0.0f);
+
+    const float p_x_i = particles.p_x[i];
+    const float p_y_i = particles.p_y[i];
+
+    const float support = 2.0f * h;
+    const float support2 = support * support;
+
+    const int start = i * MAX_NEIGHBORS;
+    for (int curr = 0; curr < neighbors.counts[i]; ++curr) {
+        const int j = neighbors.neighbors[start + curr];
+
+        if (particles.is_bound[j]) continue;
+
+        const float dx = p_x_i - particles.p_x[j];
+        const float dy = p_y_i - particles.p_y[j];
+        const float r2 = dx * dx + dy * dy;
+
+        if (r2 > support2)
+            continue;
+
+        n += m_over_rho[j] * sph::kernels::cubic_spline_2D_deriv(dx, dy, r2, kernel_const);
+    }
+
+    return support * n;
+}
+
+glm::vec2 FluidSolver::st_cohesion_adhesion_acceleration(const int i) const {
     const float m_i = particles.m[i];
     const float p_x_i = particles.p_x[i];
     const float p_y_i = particles.p_y[i];
@@ -175,10 +205,10 @@ glm::vec2 FluidSolver::surface_tension_adhesion_acceleration(const int i) const 
         const float m_j = particles.m[j];
         const float d_p_x = p_x_i - particles.p_x[j];
         const float d_p_y = p_y_i - particles.p_y[j];
-        const float r_2 = d_p_x*d_p_x + d_p_y*d_p_y;
-        const float r = std::sqrt(r_2);
+        const float r2 = d_p_x*d_p_x + d_p_y*d_p_y;
+        const float r = std::sqrt(r2);
 
-        if (r <= 1e-6f || r_2 > support_2) continue;
+        if (r <= 1e-6f || r2 > support_2) continue;
 
         if (particles.is_bound[j]) {
             const float A = sph::kernels::adhesion_spline_2D(r, h);
@@ -186,9 +216,47 @@ glm::vec2 FluidSolver::surface_tension_adhesion_acceleration(const int i) const 
             sum += f_adhesion;
         }else {
             const float C = sph::kernels::cohesion_spline_2D(r, h);
-            const glm::vec2 f_cohesion = -gamma_st * m_i * m_j * C * glm::vec2(d_p_x, d_p_y) / r;
+            const glm::vec2 f_cohesion = -gamma_coh * m_i * m_j * C * glm::vec2(d_p_x, d_p_y) / r;
             const float k_i_j = 2.0f * rho_0 / (particles.rho[i] + particles.rho[j]);
             sum += k_i_j * f_cohesion;
+        }
+    }
+    return sum / m_i;
+}
+
+glm::vec2 FluidSolver::st_cohesion_curvature_adhesion_acceleration(int i, const std::vector<glm::vec2> &n) const {
+    const float m_i = particles.m[i];
+    const float p_x_i = particles.p_x[i];
+    const float p_y_i = particles.p_y[i];
+    const float support = 2.0f * h;
+    const float support_2 = support * support;
+
+    glm::vec2 sum = {0,0};
+
+    const int start = i * MAX_NEIGHBORS;
+    for (int curr = 0; curr < neighbors.counts[i]; curr++) {
+        const int j = neighbors.neighbors[start + curr];
+
+        const float m_j = particles.m[j];
+        const float d_p_x = p_x_i - particles.p_x[j];
+        const float d_p_y = p_y_i - particles.p_y[j];
+        const float r2 = d_p_x*d_p_x + d_p_y*d_p_y;
+        const float r = std::sqrt(r2);
+
+        if (r <= 1e-6f || r2 > support_2) continue;
+
+        if (particles.is_bound[j]) {
+            const float A = sph::kernels::adhesion_spline_2D(r, h);
+            const glm::vec2 f_adhesion = -gamma_ad * m_i * m_j * A * glm::vec2(d_p_x, d_p_y) / r;
+            sum += f_adhesion;
+        }else {
+            const float C = sph::kernels::cohesion_spline_2D(r, h);
+            const glm::vec2 f_cohesion = -gamma_coh * m_i * m_j * C * glm::vec2(d_p_x, d_p_y) / r;
+
+            const glm::vec2 f_curvature = -gamma_curv * m_i * (n[i] - n[j]);
+
+            const float k_i_j = 2.0f * rho_0 / (particles.rho[i] + particles.rho[j]);
+            sum += k_i_j * (f_cohesion + f_curvature);
         }
     }
     return sum / m_i;
@@ -201,6 +269,7 @@ void FluidSolver::step(Grid &grid, std::vector<ParticleRemoval> &removals) {
     // Precomputed temporary values
     auto p_over_rho2 = std::vector<float>(particles.count);
     auto m_over_rho = std::vector<float>(particles.count);
+    auto n = std::vector<glm::vec2>(particles.count, glm::vec2(0.0f));
     const sph::kernels::kernel_constants kernel_const(h);
 
     #pragma omp parallel
@@ -221,9 +290,6 @@ void FluidSolver::step(Grid &grid, std::vector<ParticleRemoval> &removals) {
             p_over_rho2[i] = p_i / (rho_i * rho_i);
             m_over_rho[i] = particles.m[i] / rho_i;
         }
-
-        std::vector<glm::vec2> n;
-        n.reserve(particles.count);
 
         #pragma omp for schedule(static)
         for (int i = 0; i < particles.count; i++) {
