@@ -49,7 +49,9 @@ private:
     [[nodiscard]] float pressure(int i) const;
     [[nodiscard]] glm::vec2 combined_acceleration(int i, const sph::kernels::kernel_constants &kernel_const, const std::vector<float> &p_over_rho2, const std::vector<float> &m_over_rho) const;
     [[nodiscard]] glm::vec2 gravity_acceleration(int i) const;
-    [[nodiscard]] glm::vec2 surface_tension_adhesion_acceleration(int i) const;
+    [[nodiscard]] glm::vec2 calculate_st_n(int i, const std::vector<float> &m_over_rho, const sph::kernels::kernel_constants &kernel_const) const;
+    [[nodiscard]] glm::vec2 st_cohesion_adhesion_acceleration(int i) const;
+    [[nodiscard]] glm::vec2 st_cohesion_curvature_adhesion_acceleration(int i, const std::vector<glm::vec2> &n) const;
 };
 
 #endif //SPH_FLUID_SOLVER_SOLVER_H

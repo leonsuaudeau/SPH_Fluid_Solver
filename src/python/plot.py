@@ -53,7 +53,7 @@ def main():
     X5, Y5 = read_from_file_manual("tub160k.bin")
 
     _fig, ax = plt.subplots(figsize=(8,5))
-    ax.set_ylim([0, 0.06])
+    ax.set_ylim((0.0, 0.06))
 
     ax.plot(X1, Y1, label="k=10k")
     ax.plot(X2, Y2, label="k=20k")
@@ -74,7 +74,7 @@ def main2():
     X4, Y4 = read_from_file_manual("tower50.bin")
 
     _fig, ax = plt.subplots(figsize=(8,5))
-    ax.set_ylim([0, 0.06])
+    ax.set_ylim((0.0, 0.06))
 
     ax.plot(X1, Y1, label="water column 400h")
     ax.plot(X2, Y2, label="water column 200h")

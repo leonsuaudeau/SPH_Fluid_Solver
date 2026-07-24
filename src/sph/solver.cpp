@@ -205,12 +205,12 @@ void FluidSolver::step(Grid &grid, std::vector<ParticleRemoval> &removals) {
 
     #pragma omp parallel
     {
-        #pragma omp for  reduction(max:max_neighbor_overflow_count)
+        #pragma omp for schedule(static) reduction(max:max_neighbor_overflow_count)
         for (int i = 0; i < particles.count; i++) {
             grid.calculate_neighbors(i, h, neighbors, max_neighbor_overflow_count);
         }
 
-        #pragma omp for
+        #pragma omp for schedule(static)
         for (int i = 0; i < particles.count; i++) {
             if (particles.is_bound[i]) continue;
             const float rho_i = density_explicit(i, kernel_const);
@@ -222,20 +222,30 @@ void FluidSolver::step(Grid &grid, std::vector<ParticleRemoval> &removals) {
             m_over_rho[i] = particles.m[i] / rho_i;
         }
 
-        #pragma omp for
+        std::vector<glm::vec2> n;
+        n.reserve(particles.count);
+
+        #pragma omp for schedule(static)
+        for (int i = 0; i < particles.count; i++) {
+            if (particles.is_bound[i]) continue;
+
+            n[i] = calculate_st_n(i, m_over_rho, kernel_const);
+        }
+
+        #pragma omp for schedule(static)
         for (int i = 0; i < particles.count; i++) {
             if (particles.is_bound[i]) continue;
 
             glm::vec2 acc = {0,0};
             acc += g;
             acc += combined_acceleration(i, kernel_const, p_over_rho2, m_over_rho);
-            acc += surface_tension_adhesion_acceleration(i);
+            acc += st_cohesion_curvature_adhesion_acceleration(i, n);
 
             particles.a_x[i] = acc.x;
             particles.a_y[i] = acc.y;
         }
 
-        #pragma omp for
+        #pragma omp for schedule(static)
         for (int i = 0; i < particles.count; i++) {
             if (particles.is_bound[i]) continue;
 
