@@ -9,7 +9,7 @@
 class ParticleRenderer {
 public:
     bool init();
-    void render(const FluidSolver &solver, const AppState &state, const Camera2D &camera) const;
+    void render(const FluidSolver &solver, const AppState &state, const Camera2D &camera, int mode = 0) const;
     void render(const Particles &particles, float radius, const Camera2D &camera) const;
 private:
     GLuint shader_program = 0;

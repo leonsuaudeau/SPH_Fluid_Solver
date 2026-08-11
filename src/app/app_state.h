@@ -30,6 +30,7 @@ struct AppState {
     // visual
     int selected_particle_index = -1;
     bool draw_neighbors = false;
+    int render_mode = 1;
 
     // editor
     bool placement_tool_active = true;
@@ -47,6 +48,8 @@ struct AppState {
     float obj_move [2]{0, 0};
     float obj_rot = 0.0f;
     int selected_obj_idx = -1;
+
+    float rho_0 = 1.1f;
 
     bool dragging_placement = false;
     bool dragging_object = false;

@@ -23,7 +23,7 @@ bool ParticleRenderer::init() {
     return true;
 }
 
-void ParticleRenderer::render(const FluidSolver &solver, const AppState &state, const Camera2D &camera) const {
+void ParticleRenderer::render(const FluidSolver &solver, const AppState &state, const Camera2D &camera, const int mode) const {
     glm::mat4 cameraTransform = camera.getProjectionMatrix() * camera.getViewMatrix() * glm::mat4(1.0f);
 
     glUseProgram(shader_program);
@@ -38,8 +38,8 @@ void ParticleRenderer::render(const FluidSolver &solver, const AppState &state, 
         glm::vec3 red{1,0,0};
         glm::vec3 blue{0,0,1};
         const float v = glm::length(glm::vec2(solver.particles.v_x[i], solver.particles.v_y[i]));
-        //glm::vec3 color = p.color;
-        const glm::vec3 color = solver.particles.is_bound[i]?
+
+        const glm::vec3 color = (solver.particles.is_bound[i] || mode == 0)?
             glm::vec3(solver.particles.col_r[i], solver.particles.col_g[i], solver.particles.col_b[i])
             : glm::mix(blue, red, log(v + 1e-4) / 5);
         glUniform3f(color_loc, color.r,color.g,color.b);

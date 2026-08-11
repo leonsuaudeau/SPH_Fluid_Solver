@@ -3,10 +3,10 @@
 #include "solver.h"
 
 TEST_CASE("Grid resize keeps storage in sync with dimensions") {
-    FluidSolver solver(0.0f, 1.0f, 1.0f, 0.0f, 0.0f, {0, 0}, 0.0f, 0.0f, 0.0f, 0.0f);
+    FluidSolver solver(0.0f, 1.0f, 1.0f, 0.0f, {0, 0}, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     Grid grid(2, 2, {0, 0}, solver.h, solver.particles);
 
-    solver.add_particle({3.5f, 3.5f}, {1, 0, 0});
+    solver.add_particle({3.5f, 3.5f}, {1, 0, 0}, 1.1f);
     grid.resize(4, 4);
     grid.populate_cells();
 
@@ -19,7 +19,7 @@ TEST_CASE("Grid resize keeps storage in sync with dimensions") {
 }
 
 TEST_CASE("Grid cell lookup floors coordinates at the lower boundary") {
-    FluidSolver solver(0.0f, 1.0f, 1.0f, 0.0f, 0.0f, {0, 0}, 0.0f, 0.0f, 0.0f, 0.0f);
+    FluidSolver solver(0.0f, 1.0f, 1.0f, 0.0f, {0, 0}, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     Grid grid(2, 2, {0, 0}, solver.h, solver.particles);
 
     REQUIRE(grid.get_cell_index(-0.1f, 0.5f) == -1);
@@ -28,15 +28,15 @@ TEST_CASE("Grid cell lookup floors coordinates at the lower boundary") {
 }
 
 TEST_CASE("Out-of-domain particle removal handles swap-remove indices") {
-    FluidSolver solver(0.0f, 1.0f, 1.0f, 0.0f, 0.0f, {0, 0}, 0.0f, 0.0f, 0.0f, 0.0f);
+    FluidSolver solver(0.0f, 1.0f, 1.0f, 0.0f, {0, 0}, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     Grid grid(10, 10, {0, 0}, solver.h, solver.particles);
     std::vector<ParticleRemoval> removals;
 
-    solver.add_particle({1, 1}, {1, 0, 0});
-    solver.add_particle({20, 20}, {1, 0, 0});
-    solver.add_particle({2, 2}, {1, 0, 0});
-    solver.add_particle({3, 3}, {1, 0, 0});
-    solver.add_particle({21, 21}, {1, 0, 0});
+    solver.add_particle({1, 1}, {1, 0, 0}, 1.1f);
+    solver.add_particle({20, 20}, {1, 0, 0}, 1.1f);
+    solver.add_particle({2, 2}, {1, 0, 0}, 1.1f);
+    solver.add_particle({3, 3}, {1, 0, 0}, 1.1f);
+    solver.add_particle({21, 21}, {1, 0, 0},1.1f);
 
     solver.step(grid, removals);
 
@@ -47,11 +47,11 @@ TEST_CASE("Out-of-domain particle removal handles swap-remove indices") {
 }
 
 TEST_CASE("Neighbor search finds a full center neighborhood") {
-    FluidSolver solver(0.0f, 1.0f, 1.0f, 0.0f, 0.0f, {0, 0}, 0.0f, 0.0f, 0.0f, 0.0f);
+    FluidSolver solver(0.0f, 1.0f, 1.0f, 0.0f, {0, 0}, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     Grid grid(32, 32, {-8, -8}, solver.h, solver.particles);
     std::vector<ParticleRemoval> removals;
 
-    solver.add_particle_grid({9, 9}, {0, 0}, {0, 0, 1});
+    solver.add_particle_grid({9, 9}, {0, 0}, {0, 0, 1}, 1.1f);
     solver.step(grid, removals);
 
     REQUIRE(solver.get_neighbors(40).size() == 12);

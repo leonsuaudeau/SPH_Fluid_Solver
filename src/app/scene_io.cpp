@@ -13,7 +13,7 @@ void SceneIO::load_from_json(FluidSolver &solver, const std::string &name, const
 
     solver.dt = json["dt"];
     solver.h = json["h"];
-    solver.rho_0 = json["rho_0"];
+    const float legacy_rho_0 = json.value("rho_0", 1.1f);
     solver.k = json["k"];
     solver.nu = json["nu"];
     solver.g = {json["g"][0], json["g"][1]};
@@ -27,25 +27,44 @@ void SceneIO::load_from_json(FluidSolver &solver, const std::string &name, const
     size_t size = bin_in.tellg();
     bin_in.seekg(0, std::ios::beg);
 
-    size_t count = size / sizeof(Particle2D);
+    const int version = json.value("particle_format_version", 1);
+    if (version == 1) {
+        size_t count = size / sizeof(LegacyParticle2D);
 
-    auto temp_particles = std::vector<Particle2D>(count);
-    bin_in.read(
-        reinterpret_cast<char*>(temp_particles.data()),
-        size
-    );
+        auto temp_particles = std::vector<LegacyParticle2D>(count);
+        bin_in.read(
+            reinterpret_cast<char*>(temp_particles.data()),
+            size
+        );
 
-    solver.clean_particles();
-    for (auto &p : temp_particles) {
-        solver.particles.add(p.pos, p.vel, p.acc, p.mass, p.density, p.is_fixed, p.color);
+        solver.clean_particles();
+        for (auto &p : temp_particles) {
+            solver.particles.add(p.pos, p.vel, p.mass, p.density, legacy_rho_0, p.is_fixed, 0.0f,p.color);
+        }
+    }else if (version == 2) {
+        size_t count = size / sizeof(Particle2D);
+
+        auto temp_particles = std::vector<Particle2D>(count);
+        bin_in.read(
+            reinterpret_cast<char*>(temp_particles.data()),
+            size
+        );
+
+        solver.clean_particles();
+        for (auto &p : temp_particles) {
+            solver.particles.add(p.pos, p.vel, p.mass, p.density, p.rest_density, p.is_fixed, 0.0f, p.color);
+        }
+    }else {
+        throw std::runtime_error("Unsupported particle format version");
     }
 }
 
 void SceneIO::save_to_json(FluidSolver &solver, const std::string &name, const std::string &root ) {
     nlohmann::json json;
+    json["particle_format_version"] = 2;
     json["dt"] = solver.dt;
     json["h"] = solver.h;
-    json["rho_0"] = solver.rho_0;
+    json["rho_0"] = 1.1f; // Fallback value if particles don't have rho_0
     json["k"] = solver.k;
     json["nu"] = solver.nu;
     json["g"] = {solver.g.x, solver.g.y};
@@ -67,12 +86,10 @@ void SceneIO::save_to_json(FluidSolver &solver, const std::string &name, const s
         temp_particles[i] = Particle2D(
             {solver.particles.p_x[i], solver.particles.p_y[i]},
             {solver.particles.v_x[i], solver.particles.v_y[i]},
-            {solver.particles.a_x[i], solver.particles.a_y[i]},
-            solver.particles.m[i], solver.particles.p[i], solver.particles.rho[i],
+            solver.particles.m[i], solver.particles.rho[i], solver.particles.rho_0[i],
             {solver.particles.col_r[i], solver.particles.col_g[i], solver.particles.col_b[i]},
             solver.particles.is_bound[i]);
     }
-
 
     bin_out.write(
         reinterpret_cast<const char*>(temp_particles.data()),

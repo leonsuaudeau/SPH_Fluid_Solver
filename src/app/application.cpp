@@ -66,7 +66,7 @@ void print_openmp_info() {
 
 Application::Application() :
     camera(glm::vec2(0, 0), 80, 0.00125f),
-    solver(0.001f, 0.9f, 1.1f, 20000, 0.5f, glm::vec2(0, -9.81f), 1.0f, 0.9f, 100.0f, 1.0f, 1000.0f),
+    solver(0.001f, 0.9f, 20000, 0.5f, glm::vec2(0, -9.81f), 1.0f, 0.9f, 100.0f, 1.0f, 1000.0f),
     grid(512, 512, {-256, -256}, solver.h, solver.particles){
 
     // Load files in scene path once
@@ -153,7 +153,7 @@ int Application::run() {
             state.spigot_cooldown += solver.dt;
             if (state.spigot_enabled && state.spigot_cooldown > 0.05f) {
                 state.spigot_cooldown = 0;
-                solver.add_particle_grid({3,1}, {-48,60}, {1,0,0});
+                solver.add_particle_grid({3,1}, {-48,60}, {1,0,0}, 1.1f);
                 solver.particles.v_y[solver.particles.count - 1] = -20;
                 solver.particles.v_y[solver.particles.count - 2] = -20;
                 solver.particles.v_y[solver.particles.count - 3] = -20;
@@ -187,6 +187,7 @@ int Application::run() {
         if (ImGui::Button(state.recording ? "Pause recording" : "Resume recording")) {
             state.recording = !state.recording;
         }
+        ImGui::InputInt("Render mode", &state.render_mode);
         ImGui::End();
 
         switch (state.app_mode) {
@@ -214,7 +215,7 @@ int Application::run() {
         glClear(GL_COLOR_BUFFER_BIT);
 
         grid_renderer.render(grid, camera);
-        particle_renderer.render(solver, state, camera);
+        particle_renderer.render(solver, state, camera, state.render_mode);
 
         if (state.app_mode == edit_scene) {
             particle_renderer.render(preview_particles, solver.h / 2.0f, camera);
@@ -325,9 +326,6 @@ void Application::ui_simulate() {
         grid.set_cell_size(solver.h);
         update_boundary_masses = true;
     }
-    if (ImGui::InputFloat("rho_0", &solver.rho_0, 0.0f, 0.0f, precise_float_format)) {
-        update_boundary_masses = true;
-    }
     if (ImGui::InputFloat("gamma_1", &solver.gamma_1, 0.0f, 0.0f, precise_float_format)) {
         update_boundary_masses = true;
     }
@@ -362,10 +360,13 @@ void Application::ui_simulate() {
 
             for (int i = 0; i < solver.get_num_particles(); i++) {
                 if (solver.particles.is_bound[i]) continue;
-                rho_avg += (solver.particles.rho[i] - solver.rho_0) / solver.rho_0;
+                const float rho_i = solver.particles.rho[i];
+                const float rho_0 = solver.particles.rho_0[i];
 
-                if (solver.particles.rho[i] < solver.rho_0) continue;
-                rho_avg_no_surface += (solver.particles.rho[i] - solver.rho_0) / solver.rho_0;
+                rho_avg += (rho_i - rho_0) / rho_0;
+
+                if (rho_i < rho_0) continue;
+                rho_avg_no_surface += (rho_i - rho_0) / rho_0;
             }
 
             rho_avg /= static_cast<float>(solver.get_num_particles());
@@ -580,6 +581,7 @@ void Application::ui_scene_editor() {
         }
         ImGui::SameLine();
         ImGui::Checkbox("Remove", &state.edit_delete);
+        ImGui::InputFloat("rho", &state.rho_0);
         if (state.editor_mode == rectangle) {
             ImGui::InputInt2("n", state.rect_n);
             ImGui::SliderAngle("r", &state.rect_r);
@@ -648,7 +650,7 @@ void Application::ui_scene_editor() {
 
         preview_particles.clear(); // TODO: maybe we can only update when something actually changes?
         const glm::vec3 color{state.selected_color[0], state.selected_color[1], state.selected_color[2]};
-        const float m_i = solver.get_particle_mass();
+        const float m_i = solver.get_particle_mass(state.rho_0);
 
         if (state.editor_mode == rectangle) {
             const glm::mat4 R = glm::rotate(glm::mat4(1.0f), state.rect_r, glm::vec3(0,0,1));
@@ -658,7 +660,7 @@ void Application::ui_scene_editor() {
                 for (int y = 0; y < state.rect_n[1]; y++) {
                     const glm::vec4 r_pos = glm::vec4(x - x_offset, y - y_offset, 0.0f, 0.0f) * R;
                     const glm::vec2 pos = state.placement_origin + glm::vec2(r_pos.x, r_pos.y) * solver.h;
-                    preview_particles.add(pos, {0,0}, {0,0}, m_i, solver.rho_0, state.place_boundary, color);
+                    preview_particles.add(pos, {0,0}, m_i, state.rho_0, state.rho_0, state.place_boundary, 0.0f, color);
                 }
             }
         } else if (state.editor_mode == sphere) {
@@ -672,7 +674,7 @@ void Application::ui_scene_editor() {
                         if (glm::dot(offset, offset) > radius2) continue;
 
                         const glm::vec2 pos = state.placement_origin + offset;
-                        preview_particles.add(pos, {0,0}, {0,0}, m_i, solver.rho_0, state.place_boundary, color);
+                        preview_particles.add(pos, {0,0}, m_i, state.rho_0, state.rho_0, state.place_boundary, 0.0f, color);
                     }
                 }
             }

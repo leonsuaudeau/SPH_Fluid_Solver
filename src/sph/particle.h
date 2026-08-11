@@ -3,22 +3,32 @@
 #include <vector>
 #include <glm/glm.hpp>
 
-struct Particle2D {
+struct LegacyParticle2D {
     glm::vec2 pos;
     glm::vec2 vel;
     glm::vec2 acc;
     float mass;
     float pressure;
     float density;
-    glm::vec3 color; // TODO: this is just for now
-    bool is_fixed = false; // TODO: remove this later
+    glm::vec3 color;
+    bool is_fixed = false;
+};
+
+struct Particle2D {
+    glm::vec2 pos;
+    glm::vec2 vel;
+    float mass;
+    float density;
+    float rest_density;
+    glm::vec3 color;
+    bool is_fixed = false;
 };
 
 constexpr int MAX_PARTICLES = 100000;
 
 struct Particles {
     explicit Particles(int max_particles = MAX_PARTICLES);
-    int add(glm::vec2 pos, glm::vec2 vel, glm::vec2 acc, float mass, float density, bool is_boundary, glm::vec3 color = glm::vec3(0.0f));
+    int add(glm::vec2 pos, glm::vec2 vel, float mass, float density, float rest_density, bool is_boundary, float boundary_volume = 0.0f, glm::vec3 color = glm::vec3(0.0f));
     void combine(const Particles &other);
     void remove(int i);
     void clear();
@@ -38,12 +48,14 @@ struct Particles {
     std::vector<float> m;
     std::vector<float> p;
     std::vector<float> rho;
+    std::vector<float> rho_0;
 
     std::vector<float> col_r;
     std::vector<float> col_g;
     std::vector<float> col_b;
 
     std::vector<u_int8_t> is_bound;
+    std::vector<float> bound_vol;
 };
 
 inline Particles::Particles(const int max_particles) {
@@ -58,15 +70,17 @@ inline Particles::Particles(const int max_particles) {
     m.resize(capacity);
     p.resize(capacity);
     rho.resize(capacity);
+    rho_0.resize(capacity);
     col_r.resize(capacity);
     col_g.resize(capacity);
     col_b.resize(capacity);
     is_bound.resize(capacity);
+    bound_vol.resize(capacity);
 }
 
 inline int Particles::add(
-    const glm::vec2 pos, const glm::vec2 vel, const glm::vec2 acc, const float mass,
-    const float density, const bool is_boundary, const glm::vec3 color)
+    const glm::vec2 pos, const glm::vec2 vel, const float mass,
+    const float density, const float rest_density, const bool is_boundary, const float boundary_volume, const glm::vec3 color)
 {
     if (count >= capacity) {
         return 1;
@@ -78,20 +92,22 @@ inline int Particles::add(
     p_y[i] = pos.y;
     v_x[i] = vel.x;
     v_y[i] = vel.y;
-    a_x[i] = acc.x;
-    a_y[i] = acc.y;
+    a_x[i] = 0.0f;
+    a_y[i] = 0.0f;
     m[i] = mass;
     p[i] = 0.0f;
     rho[i] = density;
+    rho_0[i] = rest_density;
     col_r[i] = color.r;
     col_g[i] = color.g;
     col_b[i] = color.b;
     is_bound[i] = is_boundary;
+    bound_vol[i] = boundary_volume;
 
     return 0;
 }
 
-inline void Particles::remove(int i) {
+inline void Particles::remove(const int i) {
     const int last = count - 1;
     if (i != last) {
         p_x[i] = p_x[last];
@@ -103,10 +119,12 @@ inline void Particles::remove(int i) {
         m[i] = m[last];
         p[i] = p[last];
         rho[i] = rho[last];
+        rho_0[i] = rho_0[last];
         col_r[i] = col_r[last];
         col_g[i] = col_g[last];
         col_b[i] = col_b[last];
         is_bound[i] = is_bound[last];
+        bound_vol[i] = bound_vol[last];
     }
     count--;
 }
@@ -129,10 +147,12 @@ inline void Particles::combine(const Particles &other) {
         m[i] = other.m[k];
         p[i] = other.p[k];
         rho[i] = other.rho[k];
+        rho_0[i] = other.rho_0[k];
         col_r[i] = other.col_r[k];
         col_g[i] = other.col_g[k];
         col_b[i] = other.col_b[k];
         is_bound[i] = other.is_bound[k];
+        bound_vol[i] = other.bound_vol[k];
     }
     count += n;
 }
