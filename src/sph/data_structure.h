@@ -3,7 +3,7 @@
 #include <vector>
 #include "particle.h"
 
-constexpr int MAX_PARTICLES_PER_CELL = 64;
+constexpr int MAX_PARTICLES_PER_CELL = 16;
 constexpr int MAX_NEIGHBORS = 128;
 
 class FluidSolver;

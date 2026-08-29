@@ -24,7 +24,7 @@ struct Particle2D {
     bool is_fixed = false;
 };
 
-constexpr int MAX_PARTICLES = 100000;
+constexpr int MAX_PARTICLES = 1000000;
 
 struct Particles {
     explicit Particles(int max_particles = MAX_PARTICLES);

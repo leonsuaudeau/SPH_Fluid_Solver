@@ -1,12 +1,12 @@
 {
-    "data_file": "../../savestate/snapshots/snapshot 26:08:11:06:15:00.bin",
+    "data_file": "../../savestate/snapshots/snapshot 26:08:24:07:39:33.bin",
     "dt": 0.006000000052154064,
     "g": [
         0.0,
         -9.8100004196167
     ],
     "h": 0.8999999761581421,
-    "k": 15000.0,
+    "k": 40000.0,
     "nu": 1.600000023841858,
     "particle_format_version": 2,
     "rho_0": 1.100000023841858
