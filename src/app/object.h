@@ -1,7 +1,6 @@
 #ifndef SPH_FLUID_SOLVER_OBJECT_H
 #define SPH_FLUID_SOLVER_OBJECT_H
 #include <algorithm>
-
 #include "../sph/particle.h"
 #include "glm/glm.hpp"
 
@@ -15,7 +14,7 @@ struct Object {
     void move(float dx, float dy, Particles &particles);
     void rotate(float angle, Particles &particles) const;
     void update(Particles &particles);
-    void on_particle_removed(const int removed, const int moved_from);
+    void on_particle_removed(int removed, int moved_from);
 
     std::vector<int> particle_indices;
     glm::vec2 origin{};
@@ -82,6 +81,5 @@ inline void Object::on_particle_removed(const int removed, const int moved_from)
         }
     }
 }
-
 
 #endif //SPH_FLUID_SOLVER_OBJECT_H

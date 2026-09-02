@@ -5,16 +5,12 @@
 #include <cmath>
 #include <filesystem>
 #include <glm/vec2.hpp>
-
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <iostream>
 #include <glm/ext/matrix_transform.hpp>
-
 #include "glfw_user_pointer.h"
-#include "scenes.h"
 #include "scene_io.h"
-
 #include <implot.h>
 
 #ifdef _OPENMP
@@ -67,7 +63,7 @@ void print_openmp_info() {
 Application::Application() :
     camera(glm::vec2(0, 0), 80, 0.00125f),
     solver(0.001f, 0.9f, 20000, 0.5f, glm::vec2(0, -9.81f), 1.0f, 0.9f, 100.0f, 1.0f, 1000.0f),
-    grid(512, 512, {-256, -256}, solver.h, solver.particles){
+    grid(512, 512, {-256, -256}, solver.h * 2, solver.particles){
 
     // Load files in scene path once
     scenes = SceneIO::get_scene_entries("scenes/");
@@ -110,7 +106,7 @@ int Application::run() {
         glfwPollEvents();
         // TODO: replace by mouse controls, mouse3 and dragging for move, scroll for zoom
         if (!state.currently_typing) {
-            // THIS IS ABSOLUTELY HORRIBLE!!!!!!
+            // THIS CAN BE DONE MORE NICELY
             if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !state.space_last_pressed && state.app_mode != edit_scene) {
                 state.paused = !state.paused;
                 state.space_last_pressed = true;
@@ -172,11 +168,6 @@ int Application::run() {
             state.paused = true;
             state.selected_particle_index = -1;
         }
-        if (ImGui::Button("View Statistics")) {
-            state.app_mode = view_plot;
-            state.paused = true;
-            state.selected_particle_index = -1;
-        }
         ImGui::End();
 
         ImGui::SetNextWindowSizeConstraints( ImVec2(200, 0), ImVec2(FLT_MAX, FLT_MAX));
@@ -196,9 +187,6 @@ int Application::run() {
                 break;
             case edit_scene:
                 ui_scene_editor();
-                break;
-            case view_plot:
-                ui_view_plot();
                 break;
         }
 
@@ -268,20 +256,7 @@ void Application::ui_simulate() {
     if (ImGui::Button(state.paused ? "Resume" : "Pause")) {
         state.paused = !state.paused;
     }
-    /*
-    if (ImGui::Button("Scene 1")) {
-        Scenes::load_scene_1(solver);
-    }
-    if (ImGui::Button("Scene 2")) {
-        Scenes::load_scene_2(solver);
-    }
-    if (ImGui::Button("Scene 3")) {
-        Scenes::load_scene_3(solver);
-    }
-    if (ImGui::Button("Scene 4")) {
-        Scenes::load_scene_4(solver);
-    }
-    */
+
     /* Snapshots */
     ImGui::TextColored(ImVec4(1,1,0,1), "Snapshots");
     if (ImGui::Button("Save snapshot")) {
@@ -302,7 +277,7 @@ void Application::ui_simulate() {
         ImGui::SameLine();
         if (ImGui::Button("load")) {
             SceneIO::load_from_json(solver, entry, "snapshots/");
-            grid.set_cell_size(solver.h);
+            grid.set_cell_size(2 * solver.h);
             solver.update_nu_boundaries(grid);
             objects.clear();
             state.selected_obj_idx = -1;
@@ -323,7 +298,7 @@ void Application::ui_simulate() {
     float h_input = solver.h;
     if (ImGui::InputFloat("h", &h_input, 0.0f, 0.0f, precise_float_format) && h_input > 0.0f) {
         solver.h = h_input;
-        grid.set_cell_size(solver.h);
+        grid.set_cell_size(2 * solver.h);
         update_boundary_masses = true;
     }
     if (ImGui::InputFloat("gamma_1", &solver.gamma_1, 0.0f, 0.0f, precise_float_format)) {
@@ -344,7 +319,9 @@ void Application::ui_simulate() {
     }
 
     if (ImGui::Button("Add cubes")) {
-        Scenes::add_cubes(solver);
+        solver.add_particle_grid({10, 10}, {-5, 40}, {1,0,0}, 1.1f);
+        solver.add_particle_grid({10, 10}, {-5, 60}, {0,1,0}, 1.1f);
+        solver.add_particle_grid({10, 10}, {-5, 80}, {1,1,0}, 1.1f);
     }
     if (ImGui::Button(state.spigot_enabled? "Turn off spigot" : "Turn on spigot")) {
         state.spigot_enabled = !state.spigot_enabled;
@@ -517,7 +494,7 @@ void Application::ui_scene_editor() {
         ImGui::SameLine();
         if (ImGui::Button("load")) {
             SceneIO::load_from_json(solver, entry, "scenes/");
-            grid.set_cell_size(solver.h);
+            grid.set_cell_size(2 * solver.h);
             solver.update_nu_boundaries(grid);
             objects.clear();
             state.selected_obj_idx = -1;
@@ -682,9 +659,4 @@ void Application::ui_scene_editor() {
     }else {
         preview_particles.clear();
     }
-}
-
-void Application::ui_view_plot() {
-    ImGui::Begin("Statistics viewer", nullptr);
-    ImGui::End();
 }

@@ -175,7 +175,7 @@ def main_density_error_comparison():
         ax.tick_params(colors="#333333", direction="out", length=3)
 
     plt.show()
-def main2():
+def main_water_column():
     datasets = (
         (50, *read_from_file_manual("tower50.bin")),
         (100, *read_from_file_manual("tower100.bin")),
@@ -359,7 +359,6 @@ def main_min_dt_at_k():
     ax.legend(loc="upper right", frameon=False, fontsize=8)
 
     plt.show()
-
 def main_time_by_particles():
     frame_time_ms = np.array(
         [0.7, 4.9, 9.1, 13, 16.9, 21.5, 26, 31,
@@ -377,7 +376,7 @@ def main_time_by_particles():
     simulation_time_ms = frame_time_ms - rendering_time_ms
     particle_counts_thousands = particle_counts / 1_000
 
-    fig, ax = plt.subplots(figsize=(5, 3.2), dpi=150, constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(10, 3.6), dpi=150, constrained_layout=True)
     ax.fill_between(
         particle_counts_thousands,
         0,
@@ -429,9 +428,133 @@ def main_time_by_particles():
     print(simulation_time_ms / frame_time_ms)
 
     plt.show()
+def main_dirac_delta():
+    x = np.linspace(-2.5, 2.5, 1_000)
+    support_radii = (2.0, 1.0, 0.5)
+    colors = ("#E69F00", "#0072B2", "#009E73")
+    line_styles = ("--", "-.", "-")
+
+    fig, ax = plt.subplots(figsize=(10, 3.6), dpi=150, constrained_layout=True)
+
+    for support_radius, color, line_style in zip(
+        support_radii, colors, line_styles):
+        h = support_radius / 2.0
+        q = np.abs(x) / h
+        kernel = (
+            np.maximum(2.0 - q, 0.0) ** 3
+            - 4.0 * np.maximum(1.0 - q, 0.0) ** 3
+        ) / (6.0 * h)
+        kernel = np.where(np.abs(x) <= support_radius, kernel, np.nan)
+        ax.plot(
+            x,
+            kernel,
+            color=color,
+            linestyle=line_style,
+            linewidth=1.8,
+            label=rf"Kernel, $r_s = {support_radius:g}$",
+            zorder=2,
+        )
+
+    delta_height = 3.1
+    ax.vlines(
+        0.0,
+        0.0,
+        delta_height,
+        color="#ff1100",
+        linewidth=1.8,
+        label=r"Dirac delta, $\delta(x)$",
+        zorder=3,
+    )
+    ax.annotate(
+        "",
+        xy=(0.0, delta_height),
+        xytext=(0.0, delta_height - 0.18),
+        arrowprops={"arrowstyle": "-|>", "color": "#ff1100", "lw": 1.8},
+    )
+    ax.text(0.08, delta_height - 0.02, r"$\delta(x)$", color="#333333")
+
+    ax.set(
+        xlabel=r"Distance from origin, $x$",
+        ylabel=r"Kernel value, $W(x, r_s)$",
+        xlim=(-2.5, 2.5),
+        ylim=(0.0, 3.3),
+    )
+    ax.set_xticks((-2, -1, 0, 1, 2))
+    ax.set_axisbelow(True)
+    ax.grid(axis="y", color="#D9D9D9", linewidth=0.7)
+    ax.grid(axis="x", color="#ECECEC", linewidth=0.5)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.spines[["left", "bottom"]].set_color("#666666")
+    ax.tick_params(colors="#333333", direction="out", length=3)
+    ax.legend(loc="upper right", frameon=False, fontsize=8)
+
+    fig.savefig(
+        "Figures/dirac_delta.png",
+        dpi=300,
+        bbox_inches="tight",
+    )
+
+    plt.show()
+def main_kernel_and_derivative():
+    h = 1.0
+    support_extent = 2.0 * h
+    x = np.linspace(-2.5, 2.5, 1_000)
+    q = np.abs(x) / h
+
+    kernel = (np.maximum(2.0 - q, 0.0) ** 3 - 4.0 * np.maximum(1.0 - q, 0.0) ** 3) / (6.0 * h)
+    kernel_derivative = np.sign(x) * (-3.0 * np.maximum(2.0 - q, 0.0) ** 2 + 12.0 * np.maximum(1.0 - q, 0.0) ** 2) / (6.0 * h**2)
+    inside_support = np.abs(x) <= support_extent
+    kernel = np.where(inside_support, kernel, np.nan)
+    kernel_derivative = np.where(inside_support, kernel_derivative, np.nan)
+
+    fig, ax = plt.subplots(figsize=(5, 3.6), dpi=150, constrained_layout=True)
+    ax.plot(
+        x,
+        kernel,
+        color="#0072B2",
+        linewidth=1.8,
+        label=rf"Kernel, $W$",
+        zorder=3,
+    )
+    ax.plot(
+        x,
+        kernel_derivative,
+        color="#E69F00",
+        linestyle="--",
+        linewidth=1.8,
+        label=rf"Derivative, $\nabla W$",
+        zorder=3,
+    )
+
+    ax.axhline(0.0, color="#666666", linewidth=0.8, zorder=2)
+    ax.axvline(-support_extent, color="#BBBBBB", linestyle=":", linewidth=1.0)
+    ax.axvline(support_extent, color="#BBBBBB", linestyle=":", linewidth=1.0)
+
+    ax.set(
+        xlabel=r"$x_j - x_i$",
+        ylabel="Function value",
+        xlim=(-2.5, 2.5),
+        ylim=(-0.75, 0.75),
+    )
+    ax.set_xticks((-2, -1, 0, 1, 2))
+    ax.set_axisbelow(True)
+    ax.grid(axis="y", color="#D9D9D9", linewidth=0.7)
+    ax.grid(axis="x", color="#ECECEC", linewidth=0.5)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.spines[["left", "bottom"]].set_color("#666666")
+    ax.tick_params(colors="#333333", direction="out", length=3)
+    ax.legend(loc="upper right", frameon=False, fontsize=8)
+
+    fig.savefig(
+        "Figures/kernel_and_derivative.png",
+        dpi=300,
+        bbox_inches="tight",
+    )
+
+    plt.show()
 
 if __name__ == "__main__":
     try:
-        main_time_by_particles()
+        main_dirac_delta()
     except (OSError, ValueError) as error:
         sys.exit(f"Error: {error}")

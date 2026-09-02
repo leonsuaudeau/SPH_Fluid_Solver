@@ -1,14 +1,11 @@
 #ifndef SPH_FLUID_SOLVER_APP_STATE_H
 #define SPH_FLUID_SOLVER_APP_STATE_H
 #include <glm/vec2.hpp>
-
 #include "object.h"
-#include "particle.h"
 
 enum AppMode {
     simulate,
-    edit_scene,
-    view_plot
+    edit_scene
 };
 
 enum EditorMode {

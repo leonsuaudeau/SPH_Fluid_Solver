@@ -13,11 +13,10 @@ target_link_libraries(sph_solver PRIVATE glm::glm OpenMP::OpenMP_CXX)
 
 add_executable(SPH_Fluid_Solver
         main.cpp
-        camera.cpp
         app/application.cpp
-        app/scenes.cpp
         app/scene_io.cpp
         app/statistics.cpp
+        rendering/camera.cpp
         rendering/particle_renderer.cpp
         rendering/grid_renderer.cpp
         rendering/shader_utilities.cpp
@@ -42,7 +41,6 @@ target_compile_definitions(SPH_Fluid_Solver PRIVATE
 )
 
 target_include_directories(SPH_Fluid_Solver PRIVATE
-        ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/external/imgui
         ${CMAKE_SOURCE_DIR}/external/imgui/backends
         ${CMAKE_SOURCE_DIR}/external/implot

@@ -12,7 +12,6 @@ namespace stats {
         float time[MAX_MEMORY];
     };
 
-    void load_from_file(const std::string &name);
     void save_to_file(const std::string &name, const float* data0, const float* data1, int count);
 }
 

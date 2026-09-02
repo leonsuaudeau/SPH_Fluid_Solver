@@ -1,7 +1,5 @@
 #include "camera.h"
-
 #include <GLFW/glfw3.h>
-
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
@@ -54,8 +52,8 @@ glm::vec2 Camera2D::get_cursor_world_pos(GLFWwindow *window) const {
     int display_w, display_h;
     glfwGetCursorPos(window, &x, &y);
     glfwGetFramebufferSize(window, &display_w, &display_h);
-    const float ndcX = (2.0f * x) / display_w - 1.0f;
-    const float ndcY = 1.0f - (2.0f * y) / display_h;
+    const float ndcX = 2.0f * x / display_w - 1.0f;
+    const float ndcY = 1.0f - 2.0f * y / display_h;
     const glm::mat4 inv_vp = glm::inverse(getProjectionMatrix() * getViewMatrix());
     glm::vec4 world_pos = inv_vp * glm::vec4(ndcX, ndcY, 0.0f, 1.0f);
     world_pos /= world_pos.w;

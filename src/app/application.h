@@ -1,7 +1,6 @@
 #ifndef SPH_FLUID_SOLVER_APPLICATION_H
 #define SPH_FLUID_SOLVER_APPLICATION_H
 #include <string>
-
 #include "app_state.h"
 #include "camera.h"
 #include "grid_renderer.h"
@@ -20,7 +19,6 @@ public:
     int run();
     void ui_scene_editor();
     void ui_simulate();
-    void ui_view_plot();
 private:
     GLFWwindow*window = nullptr;
     Camera2D camera;

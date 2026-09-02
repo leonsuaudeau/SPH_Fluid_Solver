@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 
 namespace sph::kernels {
-     /* Kernel formulations derived from Matthias Teschner, Simulation in Computer Graphics, University of Freiburg */
+     /* Cubic spline kernel formulations derived from Matthias Teschner, Simulation in Computer Graphics, University of Freiburg */
 
     struct kernel_constants {
         explicit kernel_constants(const float h) {

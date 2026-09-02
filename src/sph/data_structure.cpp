@@ -4,10 +4,7 @@
 #include <execution>
 #include <iostream>
 #include <thread>
-
 #include "solver.h"
-
-#include <omp.h>
 
 Grid::Grid(const int width, const int height, const glm::vec2 origin, const float cell_size, Particles &particles):
     particles(particles){
@@ -72,9 +69,9 @@ void Grid::calculate_neighbors(const int i, const float h, NeighborList &neighbo
     int neighbor_overflow_count = 0;
     const int neighbor_offset = i * MAX_NEIGHBORS;
 
-    for (int o_y = -2; o_y <= 2; o_y++) {
+    for (int o_y = -1; o_y <= 1; o_y++) {
         const int c_y_j = c_y_i + o_y;
-        for (int o_x = -2; o_x <= 2; o_x++) {
+        for (int o_x = -1; o_x <= 1; o_x++) {
             const int c_x_j = c_x_i + o_x;
             if (!is_inside(c_x_j, c_y_j)) continue;
 
@@ -101,69 +98,6 @@ void Grid::calculate_neighbors(const int i, const float h, NeighborList &neighbo
     }
     neighbors.counts[i] = neighbor_count;
     max_neighbor_overflow_count = neighbor_overflow_count > max_neighbor_overflow_count ? neighbor_overflow_count : max_neighbor_overflow_count;
-}
-
-void Grid::calculate_neighbors(const float h, NeighborList &neighbors) const {
-    const float radius2 = 4.0f * h * h + 0.0001f;
-    const int particle_count = particles.count;
-    int max_neighbor_overflow_count = 0;
-
-    #pragma omp parallel for schedule(static) reduction(max:max_neighbor_overflow_count)
-    for (int i = 0; i < particle_count; i++) {
-        const float p_x_i = particles.p_x[i];
-        const float p_y_i = particles.p_y[i];
-
-        const int c_x_i =  static_cast<int>(std::floor((p_x_i - origin.x) * inv_cell_size));
-        const int c_y_i = static_cast<int>(std::floor((p_y_i - origin.y) * inv_cell_size));
-
-        int neighbor_count = 0;
-        int neighbor_overflow_count = 0;
-        const int neighbor_offset = i * MAX_NEIGHBORS;
-
-        for (int o_y = -2; o_y <= 2; o_y++) {
-            const int c_y_j = c_y_i + o_y;
-            for (int o_x = -2; o_x <= 2; o_x++) {
-                const int c_x_j = c_x_i + o_x;
-                if (!is_inside(c_x_j, c_y_j)) continue;
-
-                const int c_j = c_x_j + c_y_j * width;
-
-                const int cell_offset = c_j * MAX_PARTICLES_PER_CELL;
-                const int count = counts[c_j];
-                for (int k = 0; k < count; k++) {
-                    int j = particle_indices[cell_offset + k];
-                    if (j == i) continue;
-                    const float d_x = particles.p_x[j] - p_x_i;
-                    const float d_y = particles.p_y[j] - p_y_i;
-                    const float d2 = d_x*d_x + d_y*d_y;
-                    if (d2 < radius2) {
-                        if (neighbor_count < MAX_NEIGHBORS) {
-                            neighbors.neighbors[neighbor_offset + neighbor_count] = j;
-                            neighbor_count++;
-                        }else {
-                            neighbor_overflow_count++;
-                        }
-
-                    }
-                }
-            }
-        }
-        neighbors.counts[i] = neighbor_count;
-        max_neighbor_overflow_count = neighbor_overflow_count > max_neighbor_overflow_count ? neighbor_overflow_count : max_neighbor_overflow_count;
-    }
-    if (max_neighbor_overflow_count > 0) {
-        std::cout << "Neighbor overflow count: " << max_neighbor_overflow_count << std::endl;
-    }
-}
-
-void NeighborList::add(const int i, const int j) {
-    int &count = counts[i];
-    if (count < MAX_NEIGHBORS) {
-        neighbors[count + i * MAX_NEIGHBORS] = j;
-        count++;
-    }else {
-        std::cout << "Neighbor overflow!" << std::endl;
-    }
 }
 
 void NeighborList::clear() {

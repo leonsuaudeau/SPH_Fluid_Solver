@@ -3,11 +3,9 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
-
 #include "implot.h"
 
 void Ui::set_debug_overlay(const AppState &state, const FluidSolver &solver, const Camera2D &camera) {
-    //ImGuiIO& io = ImGui::GetIO();
     constexpr float PAD = 10.0f;
     constexpr ImVec2 pos (PAD, PAD);
     constexpr ImVec2 pivot (0.0f, 0.0f);
@@ -66,7 +64,6 @@ void ImGuiLayer::render() {
 }
 
 void ImGuiLayer::shutdown() {
-    /// TODO: figure out reason for segfault (exit code 139)
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

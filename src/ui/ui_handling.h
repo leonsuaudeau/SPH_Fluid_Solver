@@ -1,7 +1,7 @@
 #ifndef SPH_FLUID_SOLVER_UI_HANDLING_H
 #define SPH_FLUID_SOLVER_UI_HANDLING_H
 #include "app_state.h"
-#include "camera.h"
+#include "../rendering/camera.h"
 #include "solver.h"
 
 struct GLFWwindow;

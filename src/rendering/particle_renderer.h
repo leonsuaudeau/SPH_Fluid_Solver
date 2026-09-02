@@ -1,7 +1,6 @@
 #ifndef SPH_FLUID_SOLVER_PARTICLE_RENDERER_H
 #define SPH_FLUID_SOLVER_PARTICLE_RENDERER_H
 #include <glad/glad.h>
-
 #include "app_state.h"
 #include "camera.h"
 #include "solver.h"

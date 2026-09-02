@@ -28,26 +28,32 @@ void ParticleRenderer::render(const FluidSolver &solver, const AppState &state, 
 
     glUseProgram(shader_program);
     glBindVertexArray(vao);
-    float radius = solver.h / 2.0f;
+    const float radius = solver.h / 2.0f;
 
     for (int i = 0; i < solver.particles.count; i++) {
         glUniformMatrix4fv(transform_loc, 1, GL_FALSE, &cameraTransform[0][0]);
         glUniform2f(center_loc, solver.particles.p_x[i], solver.particles.p_y[i]);
         glUniform1f(radius_loc, radius);
-        // debug pressure coloring TODO: this should be done in the shader, not here
-        glm::vec3 red{1,0,0};
-        glm::vec3 blue{0,0,1};
-        const float v = glm::length(glm::vec2(solver.particles.v_x[i], solver.particles.v_y[i]));
 
-        const glm::vec3 color = (solver.particles.is_bound[i] || mode == 0)?
-            glm::vec3(solver.particles.col_r[i], solver.particles.col_g[i], solver.particles.col_b[i])
-            : glm::mix(blue, red, log(v + 1e-4) / 5);
+        auto color = glm::vec3(solver.particles.col_r[i], solver.particles.col_g[i], solver.particles.col_b[i]);
+        if (mode == 0 && !solver.particles.is_bound[i]) {
+            glm::vec3 red{1,0,0};
+            glm::vec3 blue{0,0,1};
+            const float v = glm::length(glm::vec2(solver.particles.v_x[i], solver.particles.v_y[i]));
+            color = glm::mix(blue, red, log(v + 1e-4) / 5);
+        }
+        if (mode == 2 && solver.particles.is_bound[i]) {
+            glm::vec3 black{0,0,0};
+            glm::vec3 white{1, 1, 1};
+            const float m = solver.particles.bound_vol[i] * solver.particles.rho_0[i];
+            color = glm::mix(black, white, m*m*m*0.9 + 0.1);
+        }
+
         glUniform3f(color_loc, color.r,color.g,color.b);
 
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     }
 
-    // TODO: !!very important, separate coloring logic this is just a hack
     if (state.draw_neighbors && state.selected_particle_index >= 0) {
 
         const int start = state.selected_particle_index * MAX_NEIGHBORS;
@@ -77,7 +83,7 @@ void ParticleRenderer::render(const Particles &particles, const float radius, co
         glUniformMatrix4fv(transform_loc, 1, GL_FALSE, &cameraTransform[0][0]);
         glUniform2f(center_loc, particles.p_x[i], particles.p_y[i]);
         glUniform1f(radius_loc, radius);
-        const glm::vec3 color = glm::vec3(particles.col_r[i], particles.col_g[i], particles.col_b[i]);
+        const auto color = glm::vec3(particles.col_r[i], particles.col_g[i], particles.col_b[i]);
 
         glUniform3f(color_loc, color.r,color.g,color.b);
 

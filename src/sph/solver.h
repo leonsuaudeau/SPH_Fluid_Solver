@@ -23,7 +23,6 @@ public:
     void update_nu_boundaries(Grid &grid);
     void clean_particles();
     [[nodiscard]] int get_num_particles() const {return particles.count;}
-    [[nodiscard]] float get_particle_density(const int i) const {return particles.rho[i];}
     [[nodiscard]] std::vector<int> get_neighbors(int i) const;
     [[nodiscard]] float get_cfl_lambda() const;
     [[nodiscard]] float get_particle_mass(float rho_0) const;
@@ -52,7 +51,6 @@ private:
     [[nodiscard]] glm::vec2 combined_acceleration(int i, const sph::kernels::kernel_constants &kernel_const, const std::vector<float> &p_over_theta2, const std::vector<float> &m_over_rho) const;
     [[nodiscard]] glm::vec2 gravity_acceleration(int i) const;
     [[nodiscard]] glm::vec2 calculate_st_n(int i, const std::vector<float> &m_over_rho, const sph::kernels::kernel_constants &kernel_const) const;
-    [[nodiscard]] glm::vec2 st_cohesion_adhesion_acceleration(int i) const;
     [[nodiscard]] glm::vec2 st_cohesion_curvature_adhesion_acceleration(int i, const std::vector<glm::vec2> &n) const;
 };
 
