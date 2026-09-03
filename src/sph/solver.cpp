@@ -168,10 +168,6 @@ glm::vec2 FluidSolver::combined_acceleration(const int i, const sph::kernels::ke
     return -glm::vec2(p_sum_x, p_sum_y) + 2.0f * nu * glm::vec2(v_sum_x, v_sum_y);
 }
 
-glm::vec2 FluidSolver::gravity_acceleration(const int i) const {
-    return g / particles.m[i];
-}
-
 glm::vec2 FluidSolver::calculate_st_n(const int i, const std::vector<float> &m_over_rho, const sph::kernels::kernel_constants &kernel_const) const {
     glm::vec2 n(0.0f);
 
